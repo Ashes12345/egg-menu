@@ -1,0 +1,512 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>洛克王国 · 孵蛋交换菜单</title>
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: "PingFang SC", "Microsoft YaHei", "Segoe UI", system-ui, sans-serif;
+    background: linear-gradient(160deg, #f7f8fc 0%, #eef1f9 100%);
+    color: #2d3350;
+    min-height: 100vh;
+  }
+  .page { max-width: 1060px; margin: 0 auto; padding: 24px 20px 80px; }
+
+  .header { display: flex; align-items: flex-end; justify-content: space-between; gap: 12px; flex-wrap: wrap; }
+  .title { font-size: 26px; font-weight: 700; letter-spacing: 1px; }
+  .title .emoji { margin-right: 8px; }
+  .subtitle { color: #8a90a8; font-size: 13px; margin-top: 6px; }
+  .stat {
+    background: #fff; border: 1px solid #e6e9f2; border-radius: 999px;
+    padding: 6px 14px; font-size: 13px; color: #5a6080; box-shadow: 0 1px 2px rgba(30,40,90,.04);
+  }
+  .stat b { color: #2d3350; }
+
+  .toolbar {
+    position: sticky; top: 0; z-index: 10;
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+    background: rgba(247,248,252,.9); backdrop-filter: blur(8px);
+    padding: 14px 0; margin-top: 18px; border-bottom: 1px solid rgba(230,233,242,.8);
+  }
+  .search { flex: 1; min-width: 200px; position: relative; }
+  .search input {
+    width: 100%; padding: 10px 14px 10px 38px; font-size: 14px;
+    border: 1px solid #dde1ee; border-radius: 12px; background: #fff;
+    outline: none; transition: border .15s, box-shadow .15s;
+  }
+  .search input:focus { border-color: #7c8cf8; box-shadow: 0 0 0 3px rgba(124,140,248,.15); }
+  .search .icon {
+    position: absolute; left: 13px; top: 50%; transform: translateY(-50%);
+    color: #a5abc4; font-size: 15px; pointer-events: none;
+  }
+  .btn {
+    border: 1px solid #dde1ee; background: #fff; color: #4a5072;
+    font-size: 13px; padding: 9px 14px; border-radius: 12px; cursor: pointer;
+    transition: background .15s, border .15s, transform .1s; white-space: nowrap;
+  }
+  .btn:hover { background: #f2f4fb; border-color: #c9cfe4; }
+  .btn:active { transform: scale(.97); }
+  .btn.primary { background: #6b7bf7; border-color: #6b7bf7; color: #fff; }
+  .btn.primary:hover { background: #5a6af0; }
+
+  .section { margin-top: 20px; }
+  .group-head {
+    display: flex; align-items: center; gap: 10px;
+    padding: 11px 16px; border-radius: 14px; cursor: pointer;
+    border: 1px solid; user-select: none;
+    transition: filter .15s;
+  }
+  .group-head:hover { filter: brightness(.97); }
+  .group-head .gdot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
+  .group-head .gname { font-size: 15px; font-weight: 700; }
+  .group-head .gcount {
+    font-size: 12px; padding: 2px 10px; border-radius: 999px;
+    background: rgba(255,255,255,.75);
+  }
+  .group-head .chev {
+    margin-left: auto; font-size: 12px; opacity: .7;
+    transition: transform .2s;
+  }
+  .section.collapsed .chev { transform: rotate(-90deg); }
+  .group-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(158px, 1fr));
+    gap: 10px; padding: 12px 2px 0;
+  }
+  .section.collapsed .group-grid { display: none; }
+
+  .card {
+    background: #fff; border: 1px solid #e6e9f2; border-radius: 14px;
+    padding: 16px 14px 15px; cursor: pointer; position: relative;
+    transition: transform .15s, box-shadow .15s, border-color .15s;
+    box-shadow: 0 1px 3px rgba(30,40,90,.05);
+  }
+  .card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 8px 20px rgba(40,55,130,.10);
+    border-color: #c9cfe4;
+  }
+  .card:active { transform: translateY(-1px) scale(.98); }
+  .card .idx { position: absolute; top: 9px; right: 12px; font-size: 12px; color: #b6bcd4; }
+  .card .name {
+    font-size: 15px; font-weight: 600; color: #2d3350;
+    word-break: break-all; line-height: 1.4;
+  }
+  .card .copy-hint {
+    position: absolute; left: 0; right: 0; bottom: 0; height: 34px;
+    background: linear-gradient(to top, rgba(107,123,247,.12), transparent);
+    border-radius: 0 0 14px 14px;
+    display: flex; align-items: flex-end; justify-content: center;
+    font-size: 11px; color: #6b7bf7; padding-bottom: 8px;
+    opacity: 0; transition: opacity .15s;
+  }
+  .card:hover .copy-hint { opacity: 1; }
+
+  .empty {
+    text-align: center; color: #9aa0ba;
+    padding: 60px 0; font-size: 14px;
+  }
+  .empty .big { font-size: 40px; margin-bottom: 10px; }
+
+  .hint-bar {
+    background: #eef1fb; border: 1px solid #dde3f7; color: #5a6390;
+    font-size: 12.5px; border-radius: 12px; padding: 10px 14px; margin-top: 24px;
+    line-height: 1.7;
+  }
+  .footer {
+    margin-top: 26px; text-align: center; color: #a2a8c2; font-size: 12px; line-height: 1.8;
+  }
+
+  .toast {
+    position: fixed; left: 50%; bottom: 34px; transform: translateX(-50%) translateY(20px);
+    background: #2d3350; color: #fff; font-size: 13px; padding: 10px 20px;
+    border-radius: 999px; opacity: 0; pointer-events: none; z-index: 100;
+    transition: opacity .2s, transform .2s; max-width: 80vw;
+  }
+  .toast.show { opacity: 1; transform: translateX(-50%) translateY(0); }
+
+  .overlay {
+    position: fixed; inset: 0; background: rgba(30,35,60,.35); z-index: 50;
+    display: none; align-items: center; justify-content: center; padding: 20px;
+  }
+  .overlay.show { display: flex; }
+  .dialog {
+    background: #fff; border-radius: 18px; width: 100%; max-width: 620px;
+    padding: 22px; box-shadow: 0 20px 60px rgba(20,30,70,.25);
+  }
+  .dialog h3 { font-size: 17px; margin-bottom: 6px; }
+  .dialog .desc { font-size: 12.5px; color: #8a90a8; margin-bottom: 12px; line-height: 1.7; }
+  .dialog textarea {
+    width: 100%; height: 320px; resize: vertical; padding: 12px; font-size: 13px;
+    font-family: Consolas, "Courier New", monospace; line-height: 1.7;
+    border: 1px solid #dde1ee; border-radius: 12px; outline: none;
+  }
+  .dialog textarea:focus { border-color: #7c8cf8; box-shadow: 0 0 0 3px rgba(124,140,248,.15); }
+  .dialog .btns { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; }
+  .dialog .btns .right { display: flex; gap: 10px; }
+
+  @media (max-width: 640px) {
+    .title { font-size: 21px; }
+    .group-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+  }
+</style>
+</head>
+<body>
+<div class="page">
+  <div class="header">
+    <div>
+      <div class="title"><span class="emoji">🥚</span>洛克王国 · 孵蛋交换菜单</div>
+      <div class="subtitle">点击卡片可复制宠物名，直接发给对方交换</div>
+    </div>
+    <div class="stat">共 <b id="statTotal">0</b> 枚蛋 · <b id="statGroups">0</b> 个分组</div>
+  </div>
+
+  <div class="toolbar">
+    <div class="search">
+      <span class="icon">🔍</span>
+      <input id="searchInput" type="text" placeholder="搜索宠物名或分组…" autocomplete="off">
+    </div>
+    <button class="btn" id="foldBtn">全部折叠</button>
+    <button class="btn" id="importBtn">导入文本</button>
+    <button class="btn" id="editBtn">编辑数据</button>
+    <button class="btn primary" id="exportBtn">导出备份</button>
+  </div>
+
+  <div id="sections"></div>
+  <div class="empty" id="emptyBox" style="display:none">
+    <div class="big">🥚</div>没有找到匹配的蛋
+  </div>
+
+  <div class="hint-bar">
+    💡 操作提示：点击卡片复制名字 → 粘贴给对方即可发起交换。点分组标题可折叠/展开。
+    数据仅保存在你浏览器本地。编辑数据时按此格式：<b>分组名：蛋1，蛋2</b>（每行一组，蛋用中文逗号分隔）。
+    这个 HTML 文件可以直接发给别人，对方打开就能查看你的菜单。
+  </div>
+
+  <div class="footer">洛克王国孵蛋菜单 · 数据保存在本地浏览器 · 交换愉快~</div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<div class="overlay" id="overlay">
+  <div class="dialog">
+    <h3 id="dialogTitle">导入文本</h3>
+    <div class="desc" id="dialogDesc"></div>
+    <textarea id="dialogText" spellcheck="false"></textarea>
+    <div class="btns" id="dialogBtns"></div>
+  </div>
+</div>
+
+<script>
+(function () {
+  var STORAGE_KEY = 'roco_egg_menu_v2';
+  var PALETTE = [
+    { dot: '#f59e0b', bg: '#fef3d6', bd: '#f7dfa8', fg: '#a16207' },
+    { dot: '#3b82f6', bg: '#e6effe', bd: '#c3d9fb', fg: '#1d4ed8' },
+    { dot: '#a855f7', bg: '#f3e9fd', bd: '#e2ccf9', fg: '#7e22ce' },
+    { dot: '#ec4899', bg: '#fce8f3', bd: '#f6c9e1', fg: '#be185d' },
+    { dot: '#10b981', bg: '#e3f8ef', bd: '#bfebd9', fg: '#047857' },
+    { dot: '#06b6d4', bg: '#e2f6fb', bd: '#bcebf5', fg: '#0e7490' },
+    { dot: '#f43f5e', bg: '#fcebee', bd: '#f7c7d1', fg: '#be123c' },
+    { dot: '#8b5cf6', bg: '#eee9fe', bd: '#d8ccfb', fg: '#6d28d9' },
+    { dot: '#84cc16', bg: '#f0f9e2', bd: '#dcf0bd', fg: '#4d7c0f' },
+    { dot: '#f97316', bg: '#fdeee0', bd: '#f8d8ba', fg: '#c2410c' },
+    { dot: '#14b8a6', bg: '#e2f8f4', bd: '#bfede4', fg: '#0f766e' },
+    { dot: '#64748b', bg: '#eef1f5', bd: '#d6dbe6', fg: '#475569' }
+  ];
+
+  var DEFAULT_TEXT = [
+    '大婉固执：水滴蛇，火冰乌达，海葵，罗隐，圣剑，翼龙，可立鸡，夏秋冬鸟，高脚鹬，海豹，画精灵，上岸蛙，帕帕，布鲁斯，记忆石，草鹿，卡洛儿，瞌睡王，火狗，伏地兽，红钻，雪熊，雪巨人，黑棋，多西，小箱怪，冰猪',
+    '大婉平和：布是石，木偶，菠萝，骨龙，石肤蜥，矿晶虫，小甲虫，大象，瞌睡王，石石，鳗尾兽，柴薪虫，多西，蚊子',
+    '大婉沉默：水母，海盔虫，松鼠，鲸鱼，上下弦，里拉鳐，鼠獭，治愈兔，烟花团，圆号鱼',
+    '大婉开朗：小萝，草沙冰卡，高脚鹬，天鹅，噼啪鸟，寒音蛇，莎莎，长绒，小丑，草头鸭，春夏冬鸟，星尘虫，黑棋，火狗，月光狮，恶魔狼，小夜',
+    '大婉急躁：蜂后，狮鹫，寒音蛇，火狗，斑枭，黑棋，影狸',
+    '大婉踏实：喵喵，松鼠，裘卡，呆小路，灵狐，白粉蹦蹦，兽花蕾',
+    '大婉胆小：影狸，黑猫，星光狮，咔咔鸟，优优，迪迪，电羊，独角兽，绿枝枝，小丑，鳗鱼，电企鹅，粉星仔，仪使者，莎莎，梦游，睡帽鸭，小灵面，雪娃，火马，龙鱼',
+    '大婉聪明：化蝶，蓝枝枝，睡帽鸭',
+    '小婉平和：短绒',
+    '大粗急躁：亚龙',
+    '平和骨龙 |固执海豹，冰乌达',
+    '开朗狮鹫|急躁海豹，独角兽|胆小依兰龙',
+    '急躁混胆小依兰龙 |急躁混聪明独角兽'
+  ].join('\n');
+
+  var state = { groups: load(), query: '', collapsed: {} };
+
+  function load() {
+    try {
+      var raw = localStorage.getItem(STORAGE_KEY);
+      if (raw) {
+        var arr = JSON.parse(raw);
+        if (Array.isArray(arr) && arr.length) return arr;
+      }
+    } catch (e) {}
+    return parseLines(DEFAULT_TEXT);
+  }
+
+  function save() {
+    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.groups)); } catch (e) {}
+  }
+
+  function splitNames(s) {
+    return s.split(/[|，,、]/).map(function (t) { return t.trim(); }).filter(Boolean);
+  }
+
+  function parseLines(text) {
+    var groups = [];
+    var current = null;
+    text.split(/\r?\n/).forEach(function (raw) {
+      var line = raw.trim();
+      if (!line) return;
+      var m = line.match(/^(.+?)[：:]\s*(.*)$/);
+      if (m) {
+        current = { group: m[1].trim(), names: splitNames(m[2]) };
+        if (current.names.length) groups.push(current);
+        else current = null;
+      } else {
+        var names = splitNames(line);
+        if (!current) {
+          current = { group: '其他', names: [] };
+          groups.push(current);
+        }
+        current.names = current.names.concat(names);
+      }
+    });
+    return groups.filter(function (g) { return g.names.length; });
+  }
+
+  function serialize() {
+    return state.groups.map(function (g) {
+      return g.group + '：' + g.names.join('，');
+    }).join('\n');
+  }
+
+  function groupColor(name) {
+    var h = 0;
+    for (var i = 0; i < name.length; i++) h = (h * 31 + name.charCodeAt(i)) >>> 0;
+    return PALETTE[h % PALETTE.length];
+  }
+
+  function esc(s) {
+    return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+
+  function filteredGroups() {
+    var q = state.query.trim().toLowerCase();
+    if (!q) return state.groups.map(function (g) { return { group: g.group, names: g.names }; });
+    return state.groups.map(function (g) {
+      var matchGroup = g.group.toLowerCase().indexOf(q) !== -1;
+      if (matchGroup) return { group: g.group, names: g.names };
+      var names = g.names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1; });
+      return { group: g.group, names: names };
+    }).filter(function (g) { return g.names.length; });
+  }
+
+  function render() {
+    var total = 0;
+    state.groups.forEach(function (g) { total += g.names.length; });
+    document.getElementById('statTotal').textContent = total;
+    document.getElementById('statGroups').textContent = state.groups.length;
+
+    var list = filteredGroups();
+    var box = document.getElementById('sections');
+    var empty = document.getElementById('emptyBox');
+    empty.style.display = list.length ? 'none' : 'block';
+    box.innerHTML = '';
+
+    list.forEach(function (g, gi) {
+      var c = groupColor(g.group);
+      var sec = document.createElement('div');
+      sec.className = 'section' + (state.collapsed[g.group] ? ' collapsed' : '');
+      sec.innerHTML =
+        '<div class="group-head" style="background:' + c.bg + ';border-color:' + c.bd + '" data-gi="' + gi + '">' +
+        '<span class="gdot" style="background:' + c.dot + '"></span>' +
+        '<span class="gname" style="color:' + c.fg + '">' + esc(g.group) + '</span>' +
+        '<span class="gcount">' + g.names.length + ' 枚</span>' +
+        '<span class="chev">▼</span>' +
+        '</div>' +
+        '<div class="group-grid">' +
+        g.names.map(function (name, i) {
+          return '<div class="card" data-name="' + esc(name) + '">' +
+            '<span class="idx">' + (i + 1) + '</span>' +
+            '<div class="name">' + esc(name) + '</div>' +
+            '<div class="copy-hint">点击复制</div>' +
+            '</div>';
+        }).join('') +
+        '</div>';
+      box.appendChild(sec);
+    });
+
+    box.querySelectorAll('.group-head').forEach(function (head) {
+      head.addEventListener('click', function () {
+        var name = state.groups[+head.getAttribute('data-gi')].group;
+        state.collapsed[name] = !state.collapsed[name];
+        render();
+      });
+    });
+    box.querySelectorAll('.card').forEach(function (card) {
+      card.addEventListener('click', function () {
+        copyText(card.getAttribute('data-name'));
+      });
+    });
+
+    var anyExpanded = state.groups.some(function (g) { return !state.collapsed[g.group]; });
+    document.getElementById('foldBtn').textContent = anyExpanded ? '全部折叠' : '全部展开';
+  }
+
+  var toastTimer = null;
+  function toast(msg) {
+    var t = document.getElementById('toast');
+    t.textContent = msg;
+    t.classList.add('show');
+    clearTimeout(toastTimer);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1800);
+  }
+
+  function copyText(text) {
+    function fallback() {
+      var ta = document.createElement('textarea');
+      ta.value = text;
+      ta.style.position = 'fixed';
+      ta.style.opacity = '0';
+      document.body.appendChild(ta);
+      ta.select();
+      try { document.execCommand('copy'); } catch (e) {}
+      document.body.removeChild(ta);
+      toast('已复制：' + text);
+    }
+    if (navigator.clipboard && navigator.clipboard.writeText) {
+      navigator.clipboard.writeText(text).then(function () {
+        toast('已复制：' + text);
+      }).catch(fallback);
+    } else {
+      fallback();
+    }
+  }
+
+  function openDialog(title, desc, initial, buttonsHtml) {
+    document.getElementById('dialogTitle').textContent = title;
+    document.getElementById('dialogDesc').textContent = desc;
+    document.getElementById('dialogText').value = initial;
+    document.getElementById('dialogBtns').innerHTML = buttonsHtml;
+    document.getElementById('overlay').classList.add('show');
+    document.getElementById('dialogText').focus();
+  }
+
+  function closeDialog() {
+    document.getElementById('overlay').classList.remove('show');
+  }
+
+  document.getElementById('overlay').addEventListener('click', function (ev) {
+    if (ev.target === this) closeDialog();
+  });
+
+  document.getElementById('foldBtn').addEventListener('click', function () {
+    var anyExpanded = state.groups.some(function (g) { return !state.collapsed[g.group]; });
+    state.groups.forEach(function (g) { state.collapsed[g.group] = anyExpanded; });
+    render();
+  });
+
+  document.getElementById('importBtn').addEventListener('click', function () {
+    openDialog(
+      '导入文本',
+      '粘贴你的蛋列表，每行一个分组：分组名：蛋1，蛋2（没有分组名的行归入“其他”）。',
+      '',
+      '<button class="btn" onclick="app_replace()">覆盖现有数据</button>' +
+      '<span class="right">' +
+      '<button class="btn" onclick="app_importFile()">选择文件</button>' +
+      '<button class="btn primary" onclick="app_merge()">合并导入</button>' +
+      '</span>'
+    );
+  });
+
+  document.getElementById('editBtn').addEventListener('click', function () {
+    openDialog(
+      '编辑数据',
+      '格式：分组名：蛋1，蛋2（每行一组，蛋用中文逗号分隔）。修改后点击保存。',
+      serialize(),
+      '<span class="right">' +
+      '<button class="btn" onclick="app_revert()">放弃修改</button>' +
+      '<button class="btn primary" onclick="app_saveEdit()">保存</button>' +
+      '</span>'
+    );
+  });
+
+  document.getElementById('exportBtn').addEventListener('click', function () {
+    var blob = new Blob([serialize() + '\n'], { type: 'text/plain;charset=utf-8' });
+    var a = document.createElement('a');
+    var d = new Date();
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    a.href = URL.createObjectURL(blob);
+    a.download = '洛克王国孵蛋菜单_' + d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + '.txt';
+    document.body.appendChild(a);
+    a.click();
+    document.body.removeChild(a);
+    setTimeout(function () { URL.revokeObjectURL(a.href); }, 1000);
+    toast('已导出备份文件');
+  });
+
+  function commit(msg) {
+    save();
+    render();
+    closeDialog();
+    toast(msg);
+  }
+
+  window.app_replace = function () {
+    var list = parseLines(document.getElementById('dialogText').value);
+    if (!list.length) { toast('没有识别到有效数据'); return; }
+    state.groups = list;
+    state.collapsed = {};
+    commit('已导入 ' + countEggs(list) + ' 枚蛋（覆盖原数据）');
+  };
+  window.app_merge = function () {
+    var list = parseLines(document.getElementById('dialogText').value);
+    if (!list.length) { toast('没有识别到有效数据'); return; }
+    list.forEach(function (g) {
+      var found = state.groups.filter(function (x) { return x.group === g.group; })[0];
+      if (found) found.names = found.names.concat(g.names);
+      else state.groups.push(g);
+    });
+    commit('已导入 ' + countEggs(list) + ' 枚蛋（合并到现有数据）');
+  };
+  window.app_importFile = function () {
+    var input = document.createElement('input');
+    input.type = 'file';
+    input.accept = '.txt,.text,text/plain';
+    input.onchange = function () {
+      var f = input.files && input.files[0];
+      if (!f) return;
+      var reader = new FileReader();
+      reader.onload = function () {
+        document.getElementById('dialogText').value = reader.result;
+      };
+      reader.readAsText(f, 'utf-8');
+    };
+    input.click();
+  };
+  window.app_saveEdit = function () {
+    var list = parseLines(document.getElementById('dialogText').value);
+    state.groups = list;
+    state.collapsed = {};
+    commit('已保存 ' + countEggs(list) + ' 枚蛋');
+  };
+  window.app_revert = closeDialog;
+
+  function countEggs(groups) {
+    var n = 0;
+    groups.forEach(function (g) { n += g.names.length; });
+    return n;
+  }
+
+  document.getElementById('searchInput').addEventListener('input', function (ev) {
+    state.query = ev.target.value;
+    render();
+  });
+
+  render();
+})();
+</script>
+</body>
+</html>
