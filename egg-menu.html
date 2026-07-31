@@ -435,9 +435,10 @@
   document.getElementById('editBtn').addEventListener('click', function () {
     openDialog(
       '编辑数据',
-      '格式：分组名：蛋1，蛋2（每行一组，蛋用中文逗号分隔）。修改后点击保存。',
+      '格式：分组名：蛋1，蛋2（每行一组）。保存后仅你当前浏览器可见；要让所有人看到，请复制数据并更新线上 data.txt（见下方提示）。',
       serialize(),
       '<span class="right">' +
+      '<button class="btn" onclick="app_copyData()">复制数据</button>' +
       '<button class="btn" onclick="app_revert()">放弃修改</button>' +
       '<button class="btn primary" onclick="app_saveEdit()">保存</button>' +
       '</span>'
@@ -501,7 +502,10 @@
     var list = parseLines(document.getElementById('dialogText').value);
     state.groups = list;
     state.collapsed = {};
-    commit('已保存 ' + countEggs(list) + ' 枚蛋');
+    commit('已保存 ' + countEggs(list) + ' 枚蛋（仅当前浏览器）');
+  };
+  window.app_copyData = function () {
+    copyText(document.getElementById('dialogText').value);
   };
   window.app_revert = closeDialog;
 
@@ -517,6 +521,19 @@
   });
 
   render();
+
+  fetch('data.txt?t=' + Date.now())
+    .then(function (r) { return r.text(); })
+    .then(function (text) {
+      var list = parseLines(text);
+      if (list.length) {
+        state.groups = list;
+        state.collapsed = {};
+        save();
+        render();
+      }
+    })
+    .catch(function () {});
 })();
 </script>
 </body>
