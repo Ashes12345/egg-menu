@@ -50,6 +50,8 @@
   .btn:active { transform: scale(.97); }
   .btn.primary { background: #6b7bf7; border-color: #6b7bf7; color: #fff; }
   .btn.primary:hover { background: #5a6af0; }
+  .btn.warn { background: #f59e0b; border-color: #f59e0b; color: #fff; }
+  .btn.warn:hover { background: #d97706; }
 
   .section { margin-top: 20px; }
   .group-head {
@@ -137,6 +139,11 @@
   }
   .dialog h3 { font-size: 17px; margin-bottom: 6px; }
   .dialog .desc { font-size: 12.5px; color: #8a90a8; margin-bottom: 12px; line-height: 1.7; }
+  .dialog input[type="password"] {
+    width: 100%; padding: 11px 14px; font-size: 14px;
+    border: 1px solid #dde1ee; border-radius: 12px; outline: none; margin-bottom: 14px;
+  }
+  .dialog input[type="password"]:focus { border-color: #7c8cf8; box-shadow: 0 0 0 3px rgba(124,140,248,.15); }
   .dialog textarea {
     width: 100%; height: 320px; resize: vertical; padding: 12px; font-size: 13px;
     font-family: Consolas, "Courier New", monospace; line-height: 1.7;
@@ -145,6 +152,16 @@
   .dialog textarea:focus { border-color: #7c8cf8; box-shadow: 0 0 0 3px rgba(124,140,248,.15); }
   .dialog .btns { display: flex; justify-content: space-between; align-items: center; gap: 10px; margin-top: 14px; }
   .dialog .btns .right { display: flex; gap: 10px; }
+  .dialog .add-row { display: flex; gap: 8px; margin-bottom: 12px; }
+  .dialog .add-row input {
+    flex: 1; padding: 9px 12px; font-size: 13px;
+    border: 1px solid #dde1ee; border-radius: 10px; outline: none;
+  }
+  .dialog .add-row input:focus { border-color: #7c8cf8; }
+  .dialog .add-row select {
+    padding: 9px 10px; font-size: 13px;
+    border: 1px solid #dde1ee; border-radius: 10px; outline: none; background: #fff;
+  }
 
   @media (max-width: 640px) {
     .title { font-size: 21px; }
@@ -169,8 +186,7 @@
     </div>
     <button class="btn" id="foldBtn">全部折叠</button>
     <button class="btn" id="resetBtn">恢复初始</button>
-    <button class="btn" id="importBtn">导入文本</button>
-    <button class="btn" id="editBtn">编辑数据</button>
+    <button class="btn warn" id="adminBtn">⚙ 管理数据</button>
     <button class="btn primary" id="exportBtn">导出备份</button>
   </div>
 
@@ -181,27 +197,22 @@
 
   <div class="hint-bar">
     💡 操作提示：点击卡片复制名字 → 粘贴给对方即可发起交换。点分组标题可折叠/展开。
-    数据仅保存在你浏览器本地。编辑数据时按此格式：<b>分组名：蛋1，蛋2</b>（每行一组，蛋用中文逗号分隔）。
-    这个 HTML 文件可以直接发给别人，对方打开就能查看你的菜单。
+    数据实时从云端加载，管理员可通过「⚙ 管理数据」在线添加/删除。数据仅管理员能修改，访客看到的是只读版本。
   </div>
 
-  <div class="footer">洛克王国孵蛋菜单 · 数据保存在本地浏览器 · 交换愉快~</div>
+  <div class="footer">洛克王国孵蛋菜单 · 交换愉快~</div>
 </div>
 
 <div class="toast" id="toast"></div>
 
 <div class="overlay" id="overlay">
-  <div class="dialog">
-    <h3 id="dialogTitle">导入文本</h3>
-    <div class="desc" id="dialogDesc"></div>
-    <textarea id="dialogText" spellcheck="false"></textarea>
-    <div class="btns" id="dialogBtns"></div>
-  </div>
+  <div class="dialog" id="dialog"></div>
 </div>
 
 <script>
 (function () {
   var STORAGE_KEY = 'roco_egg_menu_v2';
+  var API_URL = 'https://egg-menu.2849785944.workers.dev';
   var PALETTE = [
     { dot: '#f59e0b', bg: '#fef3d6', bd: '#f7dfa8', fg: '#a16207' },
     { dot: '#3b82f6', bg: '#e6effe', bd: '#c3d9fb', fg: '#1d4ed8' },
@@ -216,22 +227,6 @@
     { dot: '#14b8a6', bg: '#e2f8f4', bd: '#bfede4', fg: '#0f766e' },
     { dot: '#64748b', bg: '#eef1f5', bd: '#d6dbe6', fg: '#475569' }
   ];
-
-  var DEFAULT_TEXT = [
-    '大婉固执：水滴蛇，火冰乌达，海葵，罗隐，圣剑，翼龙，可立鸡，夏秋冬鸟，高脚鹬，海豹，画精灵，上岸蛙，帕帕，布鲁斯，记忆石，草鹿，卡洛儿，瞌睡王，火狗，伏地兽，红钻，雪熊，雪巨人，黑棋，多西，小箱怪，冰猪',
-    '大婉平和：布是石，木偶，菠萝，骨龙，石肤蜥，矿晶虫，小甲虫，大象，瞌睡王，石石，鳗尾兽，柴薪虫，多西，蚊子',
-    '大婉沉默：水母，海盔虫，松鼠，鲸鱼，上下弦，里拉鳐，鼠獭，治愈兔，烟花团，圆号鱼',
-    '大婉开朗：小萝，草沙冰卡，高脚鹬，天鹅，噼啪鸟，寒音蛇，莎莎，长绒，小丑，草头鸭，春夏冬鸟，星尘虫，黑棋，火狗，月光狮，恶魔狼，小夜',
-    '大婉急躁：蜂后，狮鹫，寒音蛇，火狗，斑枭，黑棋，影狸',
-    '大婉踏实：喵喵，松鼠，裘卡，呆小路，灵狐，白粉蹦蹦，兽花蕾',
-    '大婉胆小：影狸，黑猫，星光狮，咔咔鸟，优优，迪迪，电羊，独角兽，绿枝枝，小丑，鳗鱼，电企鹅，粉星仔，仪使者，莎莎，梦游，睡帽鸭，小灵面，雪娃，火马，龙鱼',
-    '大婉聪明：化蝶，蓝枝枝，睡帽鸭',
-    '小婉平和：短绒',
-    '大粗急躁：亚龙',
-    '平和骨龙 |固执海豹，冰乌达',
-    '开朗狮鹫|急躁海豹，独角兽|胆小依兰龙',
-    '急躁混胆小依兰龙 |急躁混聪明独角兽'
-  ].join('\n');
 
   var state = { groups: load(), query: '', collapsed: {} };
 
@@ -250,6 +245,20 @@
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.groups)); } catch (e) {}
   }
 
+  var DEFAULT_TEXT = [
+    '大婉固执：水滴蛇，火冰乌达，海葵，罗隐，圣剑，翼龙，可立鸡，夏秋冬鸟，高脚鹬，海豹，画精灵，上岸蛙，帕帕，布鲁斯，记忆石，草鹿，卡洛儿，瞌睡王，火狗，伏地兽，红钻，雪熊，雪巨人，黑棋，多西，小箱怪，冰猪',
+    '大婉平和：布是石，木偶，菠萝，骨龙，石肤蜥，矿晶虫，小甲虫，大象，瞌睡王，石石，鳗尾兽，柴薪虫，多西，蚊子',
+    '大婉沉默：水母，海盔虫，松鼠，鲸鱼，上下弦，里拉鳐，鼠獭，治愈兔，烟花团，圆号鱼',
+    '大婉开朗：小萝，草沙冰卡，高脚鹬，天鹅，噼啪鸟，寒音蛇，莎莎，长绒，小丑，草头鸭，春夏冬鸟，星尘虫，黑棋，火狗，月光狮，恶魔狼，小夜',
+    '大婉急躁：蜂后，狮鹫，寒音蛇，火狗，斑枭，黑棋，影狸',
+    '大婉踏实：喵喵，松鼠，裘卡，呆小路，灵狐，白粉蹦蹦，兽花蕾',
+    '大婉胆小：影狸，黑猫，星光狮，咔咔鸟，优优，迪迪，电羊，独角兽，绿枝枝，小丑，鳗鱼，电企鹅，粉星仔，仪使者，莎莎，梦游，睡帽鸭，小灵面，雪娃，火马，龙鱼',
+    '大婉聪明：化蝶，蓝枝枝，睡帽鸭',
+    '小婉平和：短绒',
+    '大粗急躁：亚龙',
+    '其他：平和骨龙，固执海豹，冰乌达，开朗狮鹫，急躁海豹，独角兽，胆小依兰龙，急躁混胆小依兰龙，急躁混聪明独角兽'
+  ].join('\n');
+
   function splitNames(s) {
     return s.split(/[|，,、]/).map(function (t) { return t.trim(); }).filter(Boolean);
   }
@@ -266,7 +275,7 @@
         if (current.names.length) groups.push(current);
         else current = null;
       } else {
-        var names = splitNames(line);
+        var names = splitLinesNames(line);
         if (!current) {
           current = { group: '其他', names: [] };
           groups.push(current);
@@ -275,6 +284,17 @@
       }
     });
     return groups.filter(function (g) { return g.names.length; });
+  }
+
+  function splitLinesNames(line) {
+    var parts = line.split('|');
+    var names = [];
+    parts.forEach(function (p) {
+      var mm = p.match(/^(.+?)[：:]\s*(.*)$/);
+      if (mm) names = names.concat(splitNames(mm[2]));
+      else names = names.concat(splitNames(p));
+    });
+    return names;
   }
 
   function serialize() {
@@ -362,7 +382,7 @@
     t.textContent = msg;
     t.classList.add('show');
     clearTimeout(toastTimer);
-    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 1800);
+    toastTimer = setTimeout(function () { t.classList.remove('show'); }, 2200);
   }
 
   function copyText(text) {
@@ -386,13 +406,9 @@
     }
   }
 
-  function openDialog(title, desc, initial, buttonsHtml) {
-    document.getElementById('dialogTitle').textContent = title;
-    document.getElementById('dialogDesc').textContent = desc;
-    document.getElementById('dialogText').value = initial;
-    document.getElementById('dialogBtns').innerHTML = buttonsHtml;
+  function openDialog(html) {
+    document.getElementById('dialog').innerHTML = html;
     document.getElementById('overlay').classList.add('show');
-    document.getElementById('dialogText').focus();
   }
 
   function closeDialog() {
@@ -419,32 +435,6 @@
     }
   });
 
-  document.getElementById('importBtn').addEventListener('click', function () {
-    openDialog(
-      '导入文本',
-      '粘贴你的蛋列表，每行一个分组：分组名：蛋1，蛋2（没有分组名的行归入“其他”）。',
-      '',
-      '<button class="btn" onclick="app_replace()">覆盖现有数据</button>' +
-      '<span class="right">' +
-      '<button class="btn" onclick="app_importFile()">选择文件</button>' +
-      '<button class="btn primary" onclick="app_merge()">合并导入</button>' +
-      '</span>'
-    );
-  });
-
-  document.getElementById('editBtn').addEventListener('click', function () {
-    openDialog(
-      '编辑数据',
-      '格式：分组名：蛋1，蛋2（每行一组）。保存后仅你当前浏览器可见；要让所有人看到，请复制数据并更新线上 data.txt（见下方提示）。',
-      serialize(),
-      '<span class="right">' +
-      '<button class="btn" onclick="app_copyData()">复制数据</button>' +
-      '<button class="btn" onclick="app_revert()">放弃修改</button>' +
-      '<button class="btn primary" onclick="app_saveEdit()">保存</button>' +
-      '</span>'
-    );
-  });
-
   document.getElementById('exportBtn').addEventListener('click', function () {
     var blob = new Blob([serialize() + '\n'], { type: 'text/plain;charset=utf-8' });
     var a = document.createElement('a');
@@ -459,61 +449,119 @@
     toast('已导出备份文件');
   });
 
-  function commit(msg) {
-    save();
-    render();
-    closeDialog();
-    toast(msg);
+  function getPw() {
+    return sessionStorage.getItem('egg_admin_pw') || '';
   }
 
-  window.app_replace = function () {
-    var list = parseLines(document.getElementById('dialogText').value);
-    if (!list.length) { toast('没有识别到有效数据'); return; }
-    state.groups = list;
-    state.collapsed = {};
-    commit('已导入 ' + countEggs(list) + ' 枚蛋（覆盖原数据）');
-  };
-  window.app_merge = function () {
-    var list = parseLines(document.getElementById('dialogText').value);
-    if (!list.length) { toast('没有识别到有效数据'); return; }
-    list.forEach(function (g) {
-      var found = state.groups.filter(function (x) { return x.group === g.group; })[0];
-      if (found) found.names = found.names.concat(g.names);
-      else state.groups.push(g);
+  function adminGroups() {
+    var set = [];
+    state.groups.forEach(function (g) {
+      var found = false;
+      set.forEach(function (x) { if (x === g.group) found = true; });
+      if (!found) set.push(g.group);
     });
-    commit('已导入 ' + countEggs(list) + ' 枚蛋（合并到现有数据）');
-  };
-  window.app_importFile = function () {
-    var input = document.createElement('input');
-    input.type = 'file';
-    input.accept = '.txt,.text,text/plain';
-    input.onchange = function () {
-      var f = input.files && input.files[0];
-      if (!f) return;
-      var reader = new FileReader();
-      reader.onload = function () {
-        document.getElementById('dialogText').value = reader.result;
-      };
-      reader.readAsText(f, 'utf-8');
-    };
-    input.click();
-  };
-  window.app_saveEdit = function () {
-    var list = parseLines(document.getElementById('dialogText').value);
-    state.groups = list;
-    state.collapsed = {};
-    commit('已保存 ' + countEggs(list) + ' 枚蛋（仅当前浏览器）');
-  };
-  window.app_copyData = function () {
-    copyText(document.getElementById('dialogText').value);
-  };
-  window.app_revert = closeDialog;
-
-  function countEggs(groups) {
-    var n = 0;
-    groups.forEach(function (g) { n += g.names.length; });
-    return n;
+    return set;
   }
+
+  function showAdminLogin() {
+    openDialog(
+      '<h3>⚙ 管理数据</h3>' +
+      '<div class="desc">输入管理密码后可以在线添加/删除蛋，保存后所有人刷新即可看到最新数据。</div>' +
+      '<input type="password" id="pwInput" placeholder="管理密码" autocomplete="off">' +
+      '<div class="btns"><span></span><span class="right">' +
+      '<button class="btn" onclick="closeDialog()">取消</button>' +
+      '<button class="btn primary" onclick="app_login()">进入管理</button>' +
+      '</span></div>'
+    );
+    document.getElementById('pwInput').focus();
+  }
+
+  function showAdminEditor() {
+    var groupsHtml = adminGroups().map(function (g) {
+      return '<option value="' + esc(g) + '">' + esc(g) + '</option>';
+    }).join('');
+    openDialog(
+      '<h3>⚙ 管理数据</h3>' +
+      '<div class="desc">下方可直接编辑（格式：分组名：蛋1，蛋2）。保存后发布到线上，所有人刷新即可看到。也可以直接用「添加蛋」快捷添加。</div>' +
+      '<div class="add-row">' +
+      '<select id="addGroup">' + groupsHtml + '</select>' +
+      '<input type="text" id="addName" placeholder="蛋名（如：皇家狮鹫）" autocomplete="off">' +
+      '<button class="btn primary" onclick="app_addEgg()">＋添加</button>' +
+      '</div>' +
+      '<textarea id="adminText" spellcheck="false">' + esc(serialize()) + '</textarea>' +
+      '<div class="btns"><span class="right">' +
+      '<button class="btn" onclick="app_copyData()">复制</button>' +
+      '<button class="btn" onclick="closeDialog()">关闭</button>' +
+      '<button class="btn primary" onclick="app_publish()">保存并发布</button>' +
+      '</span></div>'
+    );
+  }
+
+  window.app_login = function () {
+    var pw = (document.getElementById('pwInput').value || '').trim();
+    if (!pw) { toast('请输入管理密码'); return; }
+    sessionStorage.setItem('egg_admin_pw', pw);
+    showAdminEditor();
+  };
+
+  window.app_addEgg = function () {
+    var group = document.getElementById('addGroup').value;
+    var name = (document.getElementById('addName').value || '').trim();
+    if (!name) { toast('请输入蛋名'); return; }
+    var text = document.getElementById('adminText').value;
+    var lines = text.split(/\r?\n/);
+    var found = null, idx = -1;
+    for (var i = 0; i < lines.length; i++) {
+      var m = lines[i].match(/^(.+?)[：:]\s*(.*)$/);
+      if (m && m[1].trim() === group) { found = lines[i]; idx = i; break; }
+    }
+    var egg = name;
+    if (found !== null) {
+      lines[idx] = found + '，' + egg;
+    } else {
+      lines.push(group + '：' + egg);
+    }
+    document.getElementById('adminText').value = lines.join('\n');
+    document.getElementById('addName').value = '';
+    toast('已添加：' + name + '（记得点「保存并发布」）');
+  };
+
+  window.app_publish = function () {
+    var text = document.getElementById('adminText').value;
+    var list = parseLines(text);
+    if (!list.length) { toast('数据格式不对，请检查'); return; }
+    var pw = getPw();
+    fetch(API_URL + '/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8', 'Authorization': 'Bearer ' + pw },
+      body: text
+    }).then(function (r) {
+      if (r.status === 401) {
+        sessionStorage.removeItem('egg_admin_pw');
+        toast('密码错误，请重新输入');
+        showAdminLogin();
+        return;
+      }
+      if (!r.ok) { toast('发布失败（' + r.status + '），请稍后重试'); return; }
+      state.groups = list;
+      state.collapsed = {};
+      save();
+      render();
+      closeDialog();
+      toast('已发布！所有人刷新即可看到');
+    }).catch(function () {
+      toast('网络错误，无法连接服务器');
+    });
+  };
+
+  window.app_copyData = function () {
+    copyText(document.getElementById('adminText').value);
+  };
+
+  document.getElementById('adminBtn').addEventListener('click', function () {
+    if (getPw()) showAdminEditor();
+    else showAdminLogin();
+  });
 
   document.getElementById('searchInput').addEventListener('input', function (ev) {
     state.query = ev.target.value;
@@ -522,8 +570,11 @@
 
   render();
 
-  fetch('data.txt?t=' + Date.now())
-    .then(function (r) { return r.text(); })
+  fetch(API_URL + '/api/data?t=' + Date.now())
+    .then(function (r) {
+      if (!r.ok) throw new Error('bad status');
+      return r.text();
+    })
     .then(function (text) {
       var list = parseLines(text);
       if (list.length) {
@@ -533,7 +584,20 @@
         render();
       }
     })
-    .catch(function () {});
+    .catch(function () {
+      fetch('data.txt?t=' + Date.now())
+        .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
+        .then(function (text) {
+          var list = parseLines(text);
+          if (list.length) {
+            state.groups = list;
+            state.collapsed = {};
+            save();
+            render();
+          }
+        })
+        .catch(function () {});
+    });
 })();
 </script>
 </body>
