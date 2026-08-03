@@ -104,6 +104,17 @@
     opacity: 0; transition: opacity .15s;
   }
   .card:hover .copy-hint { opacity: 1; }
+  .card .note-dot {
+    position: absolute; top: 8px; left: 12px; width: 8px; height: 8px;
+    border-radius: 50%; background: #6b7bf7; opacity: .8;
+  }
+  .card .note-btn {
+    position: absolute; top: 6px; right: 30px; border: none; background: none;
+    font-size: 14px; cursor: pointer; opacity: 0; padding: 2px;
+    transition: opacity .15s; border-radius: 6px;
+  }
+  .card:hover .note-btn { opacity: 1; }
+  .card .note-btn:hover { background: #eef1fb; }
 
   .empty {
     text-align: center; color: #9aa0ba;
@@ -228,7 +239,7 @@
     { dot: '#64748b', bg: '#eef1f5', bd: '#d6dbe6', fg: '#475569' }
   ];
 
-  var state = { groups: load(), query: '', collapsed: {} };
+  var state = { groups: load(), query: '', collapsed: {}, notes: {} };
 
   function load() {
     try {
@@ -349,8 +360,12 @@
         '</div>' +
         '<div class="group-grid">' +
         g.names.map(function (name, i) {
-          return '<div class="card" data-name="' + esc(name) + '">' +
+          var key = g.group + '/' + name;
+          var hasNote = isAdmin() && state.notes[key];
+          return '<div class="card" data-name="' + esc(name) + '" data-group="' + esc(g.group) + '">' +
             '<span class="idx">' + (i + 1) + '</span>' +
+            (hasNote ? '<span class="note-dot" title="有备注"></span>' : '') +
+            (isAdmin() ? '<button class="note-btn" title="编辑备注">📝</button>' : '') +
             '<div class="name">' + esc(name) + '</div>' +
             '<div class="copy-hint">点击复制</div>' +
             '</div>';
@@ -369,6 +384,13 @@
     box.querySelectorAll('.card').forEach(function (card) {
       card.addEventListener('click', function () {
         copyText(card.getAttribute('data-name'));
+      });
+    });
+    box.querySelectorAll('.card .note-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var card = btn.closest('.card');
+        showNoteDialog(card.getAttribute('data-group'), card.getAttribute('data-name'));
       });
     });
 
@@ -453,6 +475,81 @@
     return sessionStorage.getItem('egg_admin_pw') || '';
   }
 
+  function isAdmin() {
+    return !!getPw();
+  }
+
+  function b64encode(buf) {
+    var bytes = new Uint8Array(buf);
+    var bin = '';
+    for (var i = 0; i < bytes.length; i++) bin += String.fromCharCode(bytes[i]);
+    return btoa(bin);
+  }
+
+  function b64decode(b64) {
+    var bin = atob(b64);
+    var bytes = new Uint8Array(bin.length);
+    for (var i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+    return bytes.buffer;
+  }
+
+  function deriveKey(pw, saltBuf) {
+    var enc = new TextEncoder();
+    return crypto.subtle.importKey('raw', enc.encode(pw), 'PBKDF2', false, ['deriveKey'])
+      .then(function (km) {
+        return crypto.subtle.deriveKey(
+          { name: 'PBKDF2', salt: saltBuf, iterations: 300000, hash: 'SHA-256' },
+          km,
+          { name: 'AES-GCM', length: 256 },
+          false,
+          ['encrypt', 'decrypt']
+        );
+      });
+  }
+
+  function encryptNotes(pw, notesObj) {
+    var salt = crypto.getRandomValues(new Uint8Array(16));
+    var iv = crypto.getRandomValues(new Uint8Array(12));
+    return deriveKey(pw, salt).then(function (key) {
+      var plain = new TextEncoder().encode(JSON.stringify(notesObj));
+      return crypto.subtle.encrypt({ name: 'AES-GCM', iv: iv }, key, plain).then(function (cipher) {
+        return JSON.stringify({
+          v: 1,
+          s: b64encode(salt),
+          i: b64encode(iv),
+          d: b64encode(cipher)
+        });
+      });
+    });
+  }
+
+  function decryptNotes(pw, payload) {
+    var p = JSON.parse(payload);
+    return deriveKey(pw, b64decode(p.s)).then(function (key) {
+      return crypto.subtle.decrypt({ name: 'AES-GCM', iv: b64decode(p.i) }, key, b64decode(p.d));
+    }).then(function (plain) {
+      return JSON.parse(new TextDecoder().decode(plain));
+    });
+  }
+
+  function loadNotes() {
+    var pw = getPw();
+    fetch('/api/notes?t=' + Date.now())
+      .then(function (r) { return r.ok ? r.text() : Promise.reject(new Error('bad')); })
+      .then(function (text) {
+        if (!text.trim()) return;
+        return decryptNotes(pw, text).then(function (obj) {
+          state.notes = obj || {};
+          render();
+        });
+      })
+      .catch(function () {
+        state.notes = {};
+        render();
+        if (getPw()) toast('备注无法解密（可能改过密码）');
+      });
+  }
+
   function adminGroups() {
     var set = [];
     state.groups.forEach(function (g) {
@@ -507,6 +604,7 @@
       if (r.status === 200) {
         sessionStorage.setItem('egg_admin_pw', pw);
         showAdminEditor();
+        loadNotes();
       } else {
         toast('密码错误，无法进入管理');
         document.getElementById('pwInput').value = '';
@@ -515,6 +613,34 @@
     }).catch(function () {
       toast('网络错误，请稍后重试');
     });
+  };
+
+  var noteTarget = null;
+
+  function showNoteDialog(group, name) {
+    noteTarget = { group: group, name: name };
+    var key = group + '/' + name;
+    openDialog(
+      '<h3>📝 私人备注</h3>' +
+      '<div class="desc">' + esc(name) + '（' + esc(group) + '）—— 备注用管理密码加密保存，别人看不到。点击「保存并发布」后生效。</div>' +
+      '<textarea id="noteText" spellcheck="false">' + esc(state.notes[key] || '') + '</textarea>' +
+      '<div class="btns"><span></span><span class="right">' +
+      '<button class="btn" onclick="closeDialog()">取消</button>' +
+      '<button class="btn primary" onclick="app_saveNote()">保存备注</button>' +
+      '</span></div>'
+    );
+    document.getElementById('noteText').focus();
+  }
+
+  window.app_saveNote = function () {
+    if (!noteTarget) return;
+    var key = noteTarget.group + '/' + noteTarget.name;
+    var val = document.getElementById('noteText').value.trim();
+    if (val) state.notes[key] = val;
+    else delete state.notes[key];
+    render();
+    closeDialog();
+    toast('备注已保存（记得「保存并发布」上传到云端）');
   };
 
   window.app_addEgg = function () {
@@ -561,7 +687,19 @@
       save();
       render();
       closeDialog();
-      toast('已发布！所有人刷新即可看到');
+      toast('菜单已发布！');
+      encryptNotes(pw, state.notes).then(function (payload) {
+        return fetch(API_URL + '/api/notes', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + pw },
+          body: payload
+        });
+      }).then(function (rn) {
+        if (!rn.ok) toast('菜单已发布，但备注发布失败（' + rn.status + '）');
+        else toast('菜单和备注都已发布！');
+      }).catch(function () {
+        toast('菜单已发布，但备注发布失败（网络错误）');
+      });
     }).catch(function () {
       toast('网络错误，无法连接服务器');
     });
