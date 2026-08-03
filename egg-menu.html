@@ -500,8 +500,21 @@
   window.app_login = function () {
     var pw = (document.getElementById('pwInput').value || '').trim();
     if (!pw) { toast('请输入管理密码'); return; }
-    sessionStorage.setItem('egg_admin_pw', pw);
-    showAdminEditor();
+    fetch('/api/check', {
+      method: 'POST',
+      headers: { 'Authorization': 'Bearer ' + pw }
+    }).then(function (r) {
+      if (r.status === 200) {
+        sessionStorage.setItem('egg_admin_pw', pw);
+        showAdminEditor();
+      } else {
+        toast('密码错误，无法进入管理');
+        document.getElementById('pwInput').value = '';
+        document.getElementById('pwInput').focus();
+      }
+    }).catch(function () {
+      toast('网络错误，请稍后重试');
+    });
   };
 
   window.app_addEgg = function () {
