@@ -571,7 +571,7 @@
               if (noSet.indexOf(d.no) === -1) noSet.push(d.no);
               imgHtml += '<img class="pet-img" loading="lazy" alt="' + esc(d.name) + '" title="' + esc(d.name) + '" src="' + esc(d.img) + '" onerror="this.classList.add(\'broken\')">';
             });
-            var badge = eggCount(name) > 1 ? '<span class="count-badge">' + eggCount(name) + '</span>' : '';
+            var badge = '<span class="count-badge">' + eggCount(name) + '</span>';
             imgHtml = '<div class="pet-imgs">' + imgHtml + badge + '</div>';
             noHtml = '<span class="pet-no">NO.' + noSet.join('/') + '</span>';
           }
