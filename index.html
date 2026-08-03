@@ -263,7 +263,17 @@
 
   @media (max-width: 640px) {
     .title { font-size: 21px; }
-    .group-grid { grid-template-columns: repeat(auto-fill, minmax(130px, 1fr)); }
+    .group-grid { grid-template-columns: repeat(auto-fill, minmax(96px, 1fr)); gap: 8px; }
+    .card { padding: 10px 8px 9px; border-radius: 12px; }
+    .card .idx { top: 6px; right: 8px; font-size: 10px; }
+    .card .pet-img { width: 52px; height: 52px; margin: 3px 1px 4px; }
+    .card .pet-img:first-child { width: 64px; height: 64px; }
+    .card .count-badge { min-width: 17px; height: 17px; font-size: 10px; right: -3px; bottom: -1px; }
+    .card .pet-no { font-size: 9.5px; margin-bottom: 1px; }
+    .card .name { font-size: 12.5px; line-height: 1.3; }
+    .card .copy-hint { height: 26px; font-size: 10px; padding-bottom: 5px; border-radius: 0 0 12px 12px; }
+    .card .note-dot { top: 5px; left: 8px; width: 7px; height: 7px; }
+    .card .note-btn { top: 4px; right: 22px; font-size: 12px; }
   }
 </style>
 </head>
