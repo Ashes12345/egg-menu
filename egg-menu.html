@@ -92,10 +92,12 @@
   .card:active { transform: translateY(-1px) scale(.98); }
   .card .idx { position: absolute; top: 9px; right: 12px; font-size: 12px; color: #b6bcd4; }
   .card .pet-img {
-    display: block; width: 92px; height: 92px; margin: 4px auto 8px;
-    object-fit: contain; border-radius: 10px;
+    display: inline-block; width: 64px; height: 64px; margin: 4px 2px 6px;
+    object-fit: contain; border-radius: 10px; vertical-align: middle;
     background: radial-gradient(circle at 50% 40%, #f4f7ff 0%, #e9eefb 100%);
   }
+  .card .pet-img:first-child { width: 84px; height: 84px; }
+  .card .pet-imgs { text-align: center; }
   .card .pet-img.broken { visibility: hidden; }
   .card .pet-no {
     display: block; text-align: center; font-size: 11px; color: #a0a7c3;
@@ -266,8 +268,7 @@
     '冰乌达': '乌达（极夜的样子）',
     '海葵': '加油海葵',
     '圣剑': '圣剑骑士',
-    '夏秋冬鸟': '岚鸟（夏天的样子）',
-    '春夏冬鸟': '岚鸟（春天的样子）',
+    '春春夏秋冬鸟': ['岚鸟（春天的样子）', '岚鸟（夏天的样子）', '岚鸟（秋天的样子）', '岚鸟'],
     '海豹': '海豹船长',
     '固执海豹': '海豹船长',
     '急躁海豹': '海豹船长',
@@ -339,15 +340,19 @@
 
   function dexFind(name) {
     var target = ALIASES[name] || name;
-    for (var i = 0; i < dexList.length; i++) {
-      if (dexList[i].name === target) return dexList[i];
+    if (typeof target === 'string') target = [target];
+    var hits = [];
+    for (var i = 0; i < target.length; i++) {
+      for (var j = 0; j < dexList.length; j++) {
+        if (dexList[j].name === target[i]) hits.push(dexList[j]);
+      }
     }
-    return null;
+    return hits.length ? hits : null;
   }
 
   function petNo(name) {
     var d = dexFind(name);
-    return d ? parseInt(d.no, 10) : 0;
+    return d ? parseInt(d[0].no, 10) : 0;
   }
 
   function sortedNames(g) {
@@ -377,10 +382,10 @@
   }
 
   var DEFAULT_TEXT = [
-    '大婉固执：水滴蛇，火冰乌达，海葵，罗隐，圣剑，翼龙，可立鸡，夏秋冬鸟，高脚鹬，海豹，画精灵，上岸蛙，帕帕，布鲁斯，记忆石，草鹿，卡洛儿，瞌睡王，火狗，伏地兽，红钻，雪熊，雪巨人，黑棋，多西，小箱怪，冰猪',
+    '大婉固执：水滴蛇，火冰乌达，海葵，罗隐，圣剑，翼龙，可立鸡，春夏秋冬鸟，高脚鹬，海豹，画精灵，上岸蛙，帕帕，布鲁斯，记忆石，草鹿，卡洛儿，瞌睡王，火狗，伏地兽，红钻，雪熊，雪巨人，黑棋，多西，小箱怪，冰猪',
     '大婉平和：布是石，木偶，菠萝，骨龙，石肤蜥，矿晶虫，小甲虫，大象，瞌睡王，石石，鳗尾兽，柴薪虫，多西，蚊子',
     '大婉沉默：水母，海盔虫，松鼠，鲸鱼，上下弦，里拉鳐，鼠獭，治愈兔，烟花团，圆号鱼',
-    '大婉开朗：小萝，草沙冰卡，高脚鹬，天鹅，噼啪鸟，寒音蛇，莎莎，长绒，小丑，草头鸭，春夏冬鸟，星尘虫，黑棋，火狗，月光狮，恶魔狼，小夜',
+    '大婉开朗：小萝，草沙冰卡，高脚鹬，天鹅，噼啪鸟，寒音蛇，莎莎，长绒，小丑，草头鸭，春夏秋冬鸟，星尘虫，黑棋，火狗，月光狮，恶魔狼，小夜',
     '大婉急躁：蜂后，狮鹫，寒音蛇，火狗，斑枭，黑棋，影狸',
     '大婉踏实：喵喵，松鼠，裘卡，呆小路，灵狐，白粉蹦蹦，兽花蕾',
     '大婉胆小：影狸，黑猫，星光狮，咔咔鸟，优优，迪迪，电羊，独角兽，绿枝枝，小丑，鳗鱼，电企鹅，粉星仔，仪使者，莎莎，梦游，睡帽鸭，小灵面，雪娃，火马，龙鱼',
@@ -486,12 +491,17 @@
         g.names.map(function (name, i) {
           var key = g.group + '/' + name;
           var hasNote = isAdmin() && state.notes[key];
-          var d = dexFind(name);
+          var ds = dexFind(name) || [];
           var imgHtml = '';
           var noHtml = '';
-          if (d) {
-            noHtml = '<span class="pet-no">NO.' + d.no + '</span>';
-            imgHtml = '<img class="pet-img" loading="lazy" alt="' + esc(d.name) + '" src="' + esc(d.img) + '" onerror="this.classList.add(\'broken\')">';
+          if (ds.length) {
+            var noSet = [];
+            ds.forEach(function (d) {
+              if (noSet.indexOf(d.no) === -1) noSet.push(d.no);
+              imgHtml += '<img class="pet-img" loading="lazy" alt="' + esc(d.name) + '" title="' + esc(d.name) + '" src="' + esc(d.img) + '" onerror="this.classList.add(\'broken\')">';
+            });
+            imgHtml = '<div class="pet-imgs">' + imgHtml + '</div>';
+            noHtml = '<span class="pet-no">NO.' + noSet.join('/') + '</span>';
           }
           return '<div class="card" data-name="' + esc(name) + '" data-group="' + esc(g.group) + '">' +
             '<span class="idx">' + (i + 1) + '</span>' +
