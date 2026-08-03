@@ -97,7 +97,14 @@
     background: radial-gradient(circle at 50% 40%, #f4f7ff 0%, #e9eefb 100%);
   }
   .card .pet-img:first-child { width: 84px; height: 84px; }
-  .card .pet-imgs { text-align: center; }
+  .card .pet-imgs { text-align: center; position: relative; display: inline-block; }
+  .card .count-badge {
+    position: absolute; right: -4px; bottom: 0; z-index: 1;
+    min-width: 20px; height: 20px; padding: 0 5px;
+    background: #e5484d; color: #fff; font-size: 12px; font-weight: 700;
+    border-radius: 999px; border: 2px solid #fff; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+  }
   .card .pet-img.broken { visibility: hidden; }
   .card .pet-no {
     display: block; text-align: center; font-size: 11px; color: #a0a7c3;
@@ -195,6 +202,47 @@
     padding: 9px 10px; font-size: 13px;
     border: 1px solid #dde1ee; border-radius: 10px; outline: none; background: #fff;
   }
+  .dialog .add-row select:focus { border-color: #7c8cf8; }
+  .dialog .add-row .btn { flex-shrink: 0; }
+  .admin-list { max-height: 320px; overflow-y: auto; margin-top: 2px; }
+  .admin-group-row {
+    border: 1px solid #e6e9f2; border-radius: 12px; padding: 10px;
+    margin-bottom: 10px; background: #fbfcff;
+  }
+  .admin-group-row .ag-head { display: flex; gap: 8px; align-items: center; margin-bottom: 8px; }
+  .admin-group-row .ag-name {
+    flex: 1; padding: 7px 10px; font-size: 13px; font-weight: 600;
+    border: 1px solid #dde1ee; border-radius: 10px; outline: none;
+  }
+  .admin-group-row .ag-name:focus { border-color: #7c8cf8; }
+  .admin-group-row .ag-eggs { display: flex; flex-wrap: wrap; gap: 8px; }
+  .admin-group-row .ag-egg {
+    display: flex; align-items: center; gap: 4px;
+    background: #fff; border: 1px solid #e6e9f2; border-radius: 10px;
+    padding: 4px 6px;
+  }
+  .admin-group-row .ag-egg input {
+    border: 1px solid #e6e9f2; border-radius: 8px; padding: 5px 6px;
+    font-size: 13px; outline: none; width: 88px;
+  }
+  .admin-group-row .ag-egg input:focus { border-color: #7c8cf8; }
+  .admin-group-row .ag-egg .ag-count { width: 52px; text-align: center; }
+  .admin-group-row .ag-egg .ag-del {
+    border: none; background: none; color: #c0c6dd; font-size: 13px;
+    cursor: pointer; padding: 2px 4px; border-radius: 6px;
+  }
+  .admin-group-row .ag-egg .ag-del:hover { color: #e5484d; background: #fdecec; }
+  .admin-group-row .ag-add {
+    border: 1px dashed #c9cfe4; background: none; color: #6b7bf7;
+    font-size: 12px; padding: 6px 12px; border-radius: 10px; cursor: pointer;
+    margin-top: 8px;
+  }
+  .admin-group-row .ag-add:hover { background: #eef1fb; }
+  .admin-list .ag-new {
+    width: 100%; border: 1px dashed #c9cfe4; background: none; color: #6b7bf7;
+    font-size: 13px; padding: 10px; border-radius: 12px; cursor: pointer; margin-top: 2px;
+  }
+  .admin-list .ag-new:hover { background: #eef1fb; }
 
   @media (max-width: 640px) {
     .title { font-size: 21px; }
@@ -365,7 +413,7 @@
   }
 
   function sortedNames(g) {
-    return g.names.map(function (n) { return { name: n, no: petNo(n) }; })
+    return g.names.map(function (n) { return { name: n, no: petNo(eggBase(n)) }; })
       .sort(function (a, b) {
         if (a.no && b.no) return a.no - b.no;
         if (a.no) return -1;
@@ -408,6 +456,20 @@
     return s.split(/[|，,、]/).map(function (t) { return t.trim(); }).filter(Boolean);
   }
 
+  function eggBase(name) {
+    return name.replace(/[×x](\d+)$/, '');
+  }
+
+  function eggCount(name) {
+    var m = name.match(/[×x](\d+)$/);
+    return m ? parseInt(m[1], 10) : 1;
+  }
+
+  function eggName(name) {
+    var c = eggCount(name);
+    return c > 1 ? eggBase(name) + '×' + c : eggBase(name);
+  }
+
   function parseLines(text) {
     var groups = [];
     var current = null;
@@ -444,7 +506,7 @@
 
   function serialize() {
     return state.groups.map(function (g) {
-      return g.group + '：' + g.names.join('，');
+      return g.group + '：' + g.names.map(eggName).join('，');
     }).join('\n');
   }
 
@@ -464,7 +526,7 @@
     return state.groups.map(function (g) {
       var matchGroup = g.group.toLowerCase().indexOf(q) !== -1;
       if (matchGroup) return { group: g.group, names: sortedNames(g) };
-      var names = g.names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1; });
+      var names = g.names.filter(function (n) { return eggBase(n).toLowerCase().indexOf(q) !== -1; });
       return { group: g.group, names: names };
     }).filter(function (g) { return g.names.length; });
   }
@@ -498,9 +560,9 @@
         '</div>' +
         '<div class="group-grid">' +
         g.names.map(function (name, i) {
-          var key = g.group + '/' + name;
+          var key = g.group + '/' + eggBase(name);
           var hasNote = isAdmin() && state.notes[key];
-          var ds = dexFind(name) || [];
+          var ds = dexFind(eggBase(name)) || [];
           var imgHtml = '';
           var noHtml = '';
           if (ds.length) {
@@ -509,16 +571,17 @@
               if (noSet.indexOf(d.no) === -1) noSet.push(d.no);
               imgHtml += '<img class="pet-img" loading="lazy" alt="' + esc(d.name) + '" title="' + esc(d.name) + '" src="' + esc(d.img) + '" onerror="this.classList.add(\'broken\')">';
             });
-            imgHtml = '<div class="pet-imgs">' + imgHtml + '</div>';
+            var badge = eggCount(name) > 1 ? '<span class="count-badge">' + eggCount(name) + '</span>' : '';
+            imgHtml = '<div class="pet-imgs">' + imgHtml + badge + '</div>';
             noHtml = '<span class="pet-no">NO.' + noSet.join('/') + '</span>';
           }
-          return '<div class="card" data-name="' + esc(name) + '" data-group="' + esc(g.group) + '">' +
+          return '<div class="card" data-name="' + esc(eggBase(name)) + '" data-group="' + esc(g.group) + '">' +
             '<span class="idx">' + (i + 1) + '</span>' +
             (hasNote ? '<span class="note-dot" title="有备注"></span>' : '') +
             (isAdmin() ? '<button class="note-btn" title="编辑备注">📝</button>' : '') +
             imgHtml +
             noHtml +
-            '<div class="name">' + esc(name) + '</div>' +
+            '<div class="name">' + esc(eggName(name)) + '</div>' +
             '<div class="copy-hint">点击复制</div>' +
             '</div>';
         }).join('') +
@@ -738,20 +801,30 @@
   }
 
   function showAdminEditor() {
-    var groupsHtml = adminGroups().map(function (g) {
-      return '<option value="' + esc(g) + '">' + esc(g) + '</option>';
+    var listHtml = state.groups.map(function (g) {
+      var eggs = g.names.map(function (n) {
+        return '<span class="ag-egg">' +
+          '<input class="ag-name" value="' + esc(eggBase(n)) + '" placeholder="蛋名">' +
+          '<input class="ag-count" type="number" min="1" max="999" value="' + eggCount(n) + '" title="数量">' +
+          '<button class="ag-del" onclick="app_delEgg(this)">✕</button>' +
+          '</span>';
+      }).join('');
+      return '<div class="admin-group-row">' +
+        '<div class="ag-head">' +
+        '<input class="ag-name" value="' + esc(g.group) + '" placeholder="分组名">' +
+        '<button class="btn" onclick="app_delGroup(this)">删除分组</button>' +
+        '</div>' +
+        '<div class="ag-eggs">' + eggs + '</div>' +
+        '<button class="ag-add" onclick="app_addEggRow(this)">＋ 添加蛋</button>' +
+        '</div>';
     }).join('');
     openDialog(
       '<h3>⚙ 管理数据</h3>' +
-      '<div class="desc">下方可直接编辑（格式：分组名：蛋1，蛋2）。保存后发布到线上，所有人刷新即可看到。也可以直接用「添加蛋」快捷添加。</div>' +
-      '<div class="add-row">' +
-      '<select id="addGroup">' + groupsHtml + '</select>' +
-      '<input type="text" id="addName" placeholder="蛋名（如：皇家狮鹫）" autocomplete="off">' +
-      '<button class="btn primary" onclick="app_addEgg()">＋添加</button>' +
+      '<div class="desc">编辑蛋名与数量，保存后发布到线上，所有人刷新即可看到。数量会显示在蛋卡图片右下角。</div>' +
+      '<div class="admin-list">' + listHtml +
+      '<button class="ag-new" onclick="app_newGroup()">＋ 添加分组</button>' +
       '</div>' +
-      '<textarea id="adminText" spellcheck="false">' + esc(serialize()) + '</textarea>' +
       '<div class="btns"><span class="right">' +
-      '<button class="btn" onclick="app_copyData()">复制</button>' +
       '<button class="btn" onclick="closeDialog()">关闭</button>' +
       '<button class="btn primary" onclick="app_publish()">保存并发布</button>' +
       '</span></div>'
@@ -783,7 +856,7 @@
   var noteTarget = null;
 
   function noteKey(type, group, name) {
-    return type === 'group' ? '#' + group : group + '/' + name;
+    return type === 'group' ? '#' + group : group + '/' + eggBase(name);
   }
 
   function showNoteDialog(type, group, name) {
@@ -858,41 +931,64 @@
     });
   }
 
-  window.app_addEgg = function () {
-    var group = document.getElementById('addGroup').value;
-    var name = (document.getElementById('addName').value || '').trim();
-    if (!name) { toast('请输入蛋名'); return; }
-    var text = document.getElementById('adminText').value;
-    var lines = text.split(/\r?\n/);
-    var found = null, idx = -1;
-    for (var i = 0; i < lines.length; i++) {
-      var m = lines[i].match(/^(.+?)[：:]\s*(.*)$/);
-      if (m && m[1].trim() === group) { found = lines[i]; idx = i; break; }
-    }
-    var egg = name;
-    if (found !== null) {
-      lines[idx] = found + '，' + egg;
-    } else {
-      lines.push(group + '：' + egg);
-    }
-    document.getElementById('adminText').value = lines.join('\n');
-    document.getElementById('addName').value = '';
-    toast('已添加：' + name + '（记得点「保存并发布」）');
+  window.app_delEgg = function (btn) {
+    var egg = btn.closest('.ag-egg');
+    if (egg) egg.parentNode.removeChild(egg);
+  };
+
+  window.app_delGroup = function (btn) {
+    var row = btn.closest('.admin-group-row');
+    if (row && confirm('删除这个分组？')) row.parentNode.removeChild(row);
+  };
+
+  window.app_addEggRow = function (btn) {
+    var eggs = btn.parentNode.querySelector('.ag-eggs');
+    var div = document.createElement('span');
+    div.className = 'ag-egg';
+    div.innerHTML = '<input class="ag-name" placeholder="蛋名">' +
+      '<input class="ag-count" type="number" min="1" max="999" value="1" title="数量">' +
+      '<button class="ag-del" onclick="app_delEgg(this)">✕</button>';
+    eggs.appendChild(div);
+    div.querySelector('.ag-name').focus();
+  };
+
+  window.app_newGroup = function () {
+    var list = document.querySelector('.admin-list');
+    var div = document.createElement('div');
+    div.className = 'admin-group-row';
+    div.innerHTML = '<div class="ag-head">' +
+      '<input class="ag-name" placeholder="分组名">' +
+      '<button class="btn" onclick="app_delGroup(this)">删除分组</button>' +
+      '</div>' +
+      '<div class="ag-eggs"></div>' +
+      '<button class="ag-add" onclick="app_addEggRow(this)">＋ 添加蛋</button>';
+    list.insertBefore(div, list.querySelector('.ag-new'));
+    div.querySelector('.ag-head .ag-name').focus();
   };
 
   window.app_publish = function () {
-    var text = document.getElementById('adminText').value;
-    var list = parseLines(text);
+    var lines = [];
+    document.querySelectorAll('.admin-group-row').forEach(function (row) {
+      var g = row.querySelector('.ag-head .ag-name').value.trim();
+      if (!g) return;
+      var names = [];
+      row.querySelectorAll('.ag-egg').forEach(function (egg) {
+        var n = egg.querySelector('.ag-name').value.trim();
+        if (!n) return;
+        var c = parseInt(egg.querySelector('.ag-count').value, 10);
+        if (!c || c < 1) c = 1;
+        names.push(c > 1 ? n + '×' + c : n);
+      });
+      if (names.length) lines.push(g + '：' + names.join('，'));
+    });
+    if (!lines.length) { toast('还没有任何蛋，请先添加'); return; }
+    var list = parseLines(lines.join('\n'));
     if (!list.length) { toast('数据格式不对，请检查'); return; }
     state.groups = list;
     state.collapsed = {};
     closeDialog();
     toast('正在发布…');
     publishAll('菜单和备注都已发布！');
-  };
-
-  window.app_copyData = function () {
-    copyText(document.getElementById('adminText').value);
   };
 
   document.getElementById('adminBtn').addEventListener('click', function () {
