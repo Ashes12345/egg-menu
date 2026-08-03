@@ -462,12 +462,12 @@
 
   function eggCount(name) {
     var m = name.match(/[×x](\d+)$/);
-    return m ? parseInt(m[1], 10) : 1;
+    return m ? parseInt(m[1], 10) : 0;
   }
 
   function eggName(name) {
     var c = eggCount(name);
-    return c > 1 ? eggBase(name) + '×' + c : eggBase(name);
+    return c > 0 ? eggBase(name) + '×' + c : eggBase(name);
   }
 
   function parseLines(text) {
@@ -805,7 +805,7 @@
       var eggs = g.names.map(function (n) {
         return '<span class="ag-egg">' +
           '<input class="ag-name" value="' + esc(eggBase(n)) + '" placeholder="蛋名">' +
-          '<input class="ag-count" type="number" min="1" max="999" value="' + eggCount(n) + '" title="数量">' +
+          '<input class="ag-count" type="number" min="0" max="999" value="' + eggCount(n) + '" title="数量">' +
           '<button class="ag-del" onclick="app_delEgg(this)">✕</button>' +
           '</span>';
       }).join('');
@@ -946,7 +946,7 @@
     var div = document.createElement('span');
     div.className = 'ag-egg';
     div.innerHTML = '<input class="ag-name" placeholder="蛋名">' +
-      '<input class="ag-count" type="number" min="1" max="999" value="1" title="数量">' +
+      '<input class="ag-count" type="number" min="0" max="999" value="0" title="数量">' +
       '<button class="ag-del" onclick="app_delEgg(this)">✕</button>';
     eggs.appendChild(div);
     div.querySelector('.ag-name').focus();
@@ -976,8 +976,8 @@
         var n = egg.querySelector('.ag-name').value.trim();
         if (!n) return;
         var c = parseInt(egg.querySelector('.ag-count').value, 10);
-        if (!c || c < 1) c = 1;
-        names.push(c > 1 ? n + '×' + c : n);
+        if (isNaN(c) || c < 0) c = 0;
+        names.push(c > 0 ? n + '×' + c : n);
       });
       if (names.length) lines.push(g + '：' + names.join('，'));
     });
