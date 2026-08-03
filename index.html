@@ -91,9 +91,19 @@
   }
   .card:active { transform: translateY(-1px) scale(.98); }
   .card .idx { position: absolute; top: 9px; right: 12px; font-size: 12px; color: #b6bcd4; }
+  .card .pet-img {
+    display: block; width: 92px; height: 92px; margin: 4px auto 8px;
+    object-fit: contain; border-radius: 10px;
+    background: radial-gradient(circle at 50% 40%, #f4f7ff 0%, #e9eefb 100%);
+  }
+  .card .pet-img.broken { visibility: hidden; }
+  .card .pet-no {
+    display: block; text-align: center; font-size: 11px; color: #a0a7c3;
+    margin-bottom: 2px; letter-spacing: .5px;
+  }
   .card .name {
     font-size: 15px; font-weight: 600; color: #2d3350;
-    word-break: break-all; line-height: 1.4;
+    word-break: break-all; line-height: 1.4; text-align: center;
   }
   .card .copy-hint {
     position: absolute; left: 0; right: 0; bottom: 0; height: 34px;
@@ -251,6 +261,106 @@
 
   var state = { groups: load(), query: '', collapsed: {}, notes: {} };
 
+  var ALIASES = {
+    '火冰乌达': '乌达（极昼的样子）',
+    '冰乌达': '乌达（极夜的样子）',
+    '海葵': '加油海葵',
+    '圣剑': '圣剑骑士',
+    '夏秋冬鸟': '岚鸟（夏天的样子）',
+    '春夏冬鸟': '岚鸟（春天的样子）',
+    '海豹': '海豹船长',
+    '固执海豹': '海豹船长',
+    '急躁海豹': '海豹船长',
+    '帕帕': '帕帕斯卡',
+    '草鹿': '针叶巡林',
+    '火狗': '音速犬',
+    '红钻': '恶魔红钻',
+    '雪熊': '月牙雪熊',
+    '黑棋': '棋骑士（黑子）',
+    '冰猪': '呼呼猪',
+    '木偶': '牵线木偶',
+    '菠萝': '嗜波螺',
+    '骨龙': '寂灭骨龙',
+    '平和骨龙': '寂灭骨龙',
+    '大象': '巨鼓象',
+    '柴薪虫': '燃薪虫',
+    '蚊子': '窃光蚊',
+    '水母': '翡翠水母',
+    '松鼠': '绿耳松鼠',
+    '鲸鱼': '深蓝鲸',
+    '上下弦': '刺轮砣（上弦的样子）',
+    '鼠獭': '小鼠獭',
+    '小萝': '厉毒小萝',
+    '草沙冰卡': '卡卡虫（草地附近的样子）',
+    '天鹅': '蓝珠天鹅',
+    '莎莎': '彩蝶鲨',
+    '长绒': '捕尘长绒',
+    '小丑': '小丑豆豆',
+    '月光狮': '星光狮（月光能量的样子）',
+    '星光狮': '星光狮（星光能量的样子）',
+    '蜂后': '花魁蜂后',
+    '狮鹫': '皇家狮鹫（高山地的样子）',
+    '开朗狮鹫': '皇家狮鹫（高山地的样子）',
+    '白粉蹦蹦': '蹦蹦种子（短毛球形态）',
+    '黑猫': '小黑猫',
+    '迪迪': '炫光迪迪',
+    '电羊': '电球咩咩',
+    '独角兽': '小独角兽',
+    '急躁混聪明独角兽': '小独角兽',
+    '绿枝枝': '海枝枝（翠绿纶布）',
+    '蓝枝枝': '海枝枝（碧蓝珊瑚）',
+    '鳗鱼': '闪电鳗鱼',
+    '梦游': '梦游（穿旧睡衣的样子）',
+    '睡帽鸭': '鸭吉吉（起来鸭）',
+    '雪娃': '雪娃娃',
+    '火马': '火红尾',
+    '化蝶': '化蝶（平常的样子）',
+    '短绒': '食尘短绒',
+    '亚龙': '伊兰亚龙',
+    '胆小依兰龙': '伊兰龙',
+    '急躁混胆小依兰龙': '伊兰龙'
+  };
+  var dexList = [];
+  var dexLoaded = false;
+
+  function loadDex() {
+    fetch('dex.json?t=' + Date.now())
+      .then(function (r) { return r.ok ? r.json() : Promise.reject(new Error('bad')); })
+      .then(function (arr) {
+        dexList = Array.isArray(arr) ? arr : [];
+        dexLoaded = true;
+        render();
+      })
+      .catch(function () {
+        dexLoaded = true;
+        render();
+      });
+  }
+
+  function dexFind(name) {
+    var target = ALIASES[name] || name;
+    for (var i = 0; i < dexList.length; i++) {
+      if (dexList[i].name === target) return dexList[i];
+    }
+    return null;
+  }
+
+  function petNo(name) {
+    var d = dexFind(name);
+    return d ? parseInt(d.no, 10) : 0;
+  }
+
+  function sortedNames(g) {
+    return g.names.map(function (n) { return { name: n, no: petNo(n) }; })
+      .sort(function (a, b) {
+        if (a.no && b.no) return a.no - b.no;
+        if (a.no) return -1;
+        if (b.no) return 1;
+        return 0;
+      })
+      .map(function (x) { return x.name; });
+  }
+
   function load() {
     try {
       var raw = localStorage.getItem(STORAGE_KEY);
@@ -336,10 +446,10 @@
 
   function filteredGroups() {
     var q = state.query.trim().toLowerCase();
-    if (!q) return state.groups.map(function (g) { return { group: g.group, names: g.names }; });
+    if (!q) return state.groups.map(function (g) { return { group: g.group, names: sortedNames(g) }; });
     return state.groups.map(function (g) {
       var matchGroup = g.group.toLowerCase().indexOf(q) !== -1;
-      if (matchGroup) return { group: g.group, names: g.names };
+      if (matchGroup) return { group: g.group, names: sortedNames(g) };
       var names = g.names.filter(function (n) { return n.toLowerCase().indexOf(q) !== -1; });
       return { group: g.group, names: names };
     }).filter(function (g) { return g.names.length; });
@@ -376,10 +486,19 @@
         g.names.map(function (name, i) {
           var key = g.group + '/' + name;
           var hasNote = isAdmin() && state.notes[key];
+          var d = dexFind(name);
+          var imgHtml = '';
+          var noHtml = '';
+          if (d) {
+            noHtml = '<span class="pet-no">NO.' + d.no + '</span>';
+            imgHtml = '<img class="pet-img" loading="lazy" alt="' + esc(d.name) + '" src="' + esc(d.img) + '" onerror="this.classList.add(\'broken\')">';
+          }
           return '<div class="card" data-name="' + esc(name) + '" data-group="' + esc(g.group) + '">' +
             '<span class="idx">' + (i + 1) + '</span>' +
             (hasNote ? '<span class="note-dot" title="有备注"></span>' : '') +
             (isAdmin() ? '<button class="note-btn" title="编辑备注">📝</button>' : '') +
+            imgHtml +
+            noHtml +
             '<div class="name">' + esc(name) + '</div>' +
             '<div class="copy-hint">点击复制</div>' +
             '</div>';
@@ -768,6 +887,7 @@
   });
 
   render();
+  loadDex();
 
   function loadRemote() {
     return fetch('/api/data?t=' + Date.now())
