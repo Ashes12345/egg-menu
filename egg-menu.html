@@ -537,7 +537,11 @@
     fetch('/api/notes?t=' + Date.now())
       .then(function (r) { return r.ok ? r.text() : Promise.reject(new Error('bad')); })
       .then(function (text) {
-        if (!text.trim()) return;
+        if (!text.trim()) {
+          state.notes = {};
+          render();
+          return;
+        }
         return decryptNotes(pw, text).then(function (obj) {
           state.notes = obj || {};
           render();
@@ -603,6 +607,7 @@
     }).then(function (r) {
       if (r.status === 200) {
         sessionStorage.setItem('egg_admin_pw', pw);
+        render();
         showAdminEditor();
         loadNotes();
       } else {
