@@ -821,6 +821,10 @@
     openDialog(
       '<h3>⚙ 管理数据</h3>' +
       '<div class="desc">编辑蛋名与数量，保存后发布到线上，所有人刷新即可看到。数量会显示在蛋卡图片右下角。</div>' +
+      '<div class="btns" style="margin-top:0;margin-bottom:10px"><span class="left">' +
+      '<button class="btn" onclick="app_setAllCount(1)">全部数量设为 1</button>' +
+      '<button class="btn" onclick="app_setAllCount(0)">全部数量设为 0</button>' +
+      '</span></div>' +
       '<div class="admin-list">' + listHtml +
       '<button class="ag-new" onclick="app_newGroup()">＋ 添加分组</button>' +
       '</div>' +
@@ -930,6 +934,11 @@
       toast('网络错误，无法连接服务器');
     });
   }
+
+  window.app_setAllCount = function (v) {
+    document.querySelectorAll('.ag-count').forEach(function (inp) { inp.value = v; });
+    toast(v ? '所有蛋数量已设为 1，记得保存并发布' : '所有蛋数量已设为 0，记得保存并发布');
+  };
 
   window.app_delEgg = function (btn) {
     var egg = btn.closest('.ag-egg');
