@@ -30,6 +30,24 @@
     background: rgba(247,248,252,.9); backdrop-filter: blur(8px);
     padding: 14px 0; margin-top: 18px; border-bottom: 1px solid rgba(230,233,242,.8);
   }
+  .group-nav {
+    position: sticky; top: 56px; z-index: 9;
+    display: flex; gap: 8px; overflow-x: auto; padding: 10px 0;
+    background: rgba(247,248,252,.9); backdrop-filter: blur(8px);
+    scrollbar-width: none; -webkit-overflow-scrolling: touch;
+  }
+  .group-nav::-webkit-scrollbar { display: none; }
+  .group-nav .gn-item {
+    flex-shrink: 0; font-size: 12.5px; padding: 7px 13px;
+    border: 1px solid #dde1ee; background: #fff; border-radius: 999px;
+    color: #4a5072; cursor: pointer; transition: background .15s, border .15s;
+    user-select: none;
+  }
+  .group-nav .gn-item:active { transform: scale(.96); }
+  .group-nav .gn-item:hover { border-color: #c9cfe4; }
+  .group-nav .gn-item .gn-n {
+    color: #a0a7c3; font-size: 11px; margin-left: 3px;
+  }
   .search { flex: 1; min-width: 200px; position: relative; }
   .search input {
     width: 100%; padding: 10px 14px 10px 38px; font-size: 14px;
@@ -271,6 +289,7 @@
     <button class="btn primary" id="exportBtn">导出备份</button>
   </div>
 
+  <div id="groupNav" class="group-nav"></div>
   <div id="sections"></div>
   <div class="empty" id="emptyBox" style="display:none">
     <div class="big">🥚</div>没有找到匹配的蛋
@@ -543,12 +562,29 @@
     empty.style.display = list.length ? 'none' : 'block';
     box.innerHTML = '';
 
+    var nav = document.getElementById('groupNav');
+    nav.innerHTML = '';
+    list.forEach(function (g) {
+      var a = document.createElement('span');
+      a.className = 'gn-item';
+      a.innerHTML = esc(g.group) + '<span class="gn-n">' + g.names.length + '</span>';
+      a.addEventListener('click', function () {
+        var target = null;
+        box.querySelectorAll('.section').forEach(function (s) {
+          if (s.getAttribute('data-gname') === g.group) target = s;
+        });
+        if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      });
+      nav.appendChild(a);
+    });
+
     list.forEach(function (g, gi) {
       var c = groupColor(g.group);
       var gKey = '#' + g.group;
       var gHasNote = isAdmin() && state.notes[gKey];
       var sec = document.createElement('div');
       sec.className = 'section' + (state.collapsed[g.group] ? ' collapsed' : '');
+      sec.setAttribute('data-gname', g.group);
       sec.innerHTML =
         '<div class="group-head" style="background:' + c.bg + ';border-color:' + c.bd + '" data-gi="' + gi + '">' +
         '<span class="gdot" style="background:' + c.dot + '"></span>' +
