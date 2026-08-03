@@ -115,6 +115,16 @@
   }
   .card:hover .note-btn { opacity: 1; }
   .card .note-btn:hover { background: #eef1fb; }
+  .group-head .g-note-btn {
+    border: none; background: none; font-size: 13px; cursor: pointer;
+    opacity: .55; padding: 2px; border-radius: 6px; transition: opacity .15s;
+  }
+  .group-head:hover .g-note-btn { opacity: 1; }
+  .group-head .g-note-btn:hover { background: rgba(255,255,255,.8); }
+  .group-head .g-dot {
+    width: 8px; height: 8px; border-radius: 50%; background: #6b7bf7;
+    opacity: .8; flex-shrink: 0;
+  }
 
   .empty {
     text-align: center; color: #9aa0ba;
@@ -349,12 +359,16 @@
 
     list.forEach(function (g, gi) {
       var c = groupColor(g.group);
+      var gKey = '#' + g.group;
+      var gHasNote = isAdmin() && state.notes[gKey];
       var sec = document.createElement('div');
       sec.className = 'section' + (state.collapsed[g.group] ? ' collapsed' : '');
       sec.innerHTML =
         '<div class="group-head" style="background:' + c.bg + ';border-color:' + c.bd + '" data-gi="' + gi + '">' +
         '<span class="gdot" style="background:' + c.dot + '"></span>' +
         '<span class="gname" style="color:' + c.fg + '">' + esc(g.group) + '</span>' +
+        (isAdmin() ? '<button class="g-note-btn" title="编辑分组备注">📝</button>' : '') +
+        (gHasNote ? '<span class="g-dot" title="有备注"></span>' : '') +
         '<span class="gcount">' + g.names.length + ' 枚</span>' +
         '<span class="chev">▼</span>' +
         '</div>' +
@@ -375,10 +389,18 @@
     });
 
     box.querySelectorAll('.group-head').forEach(function (head) {
-      head.addEventListener('click', function () {
+      head.addEventListener('click', function (ev) {
         var name = state.groups[+head.getAttribute('data-gi')].group;
         state.collapsed[name] = !state.collapsed[name];
         render();
+      });
+    });
+    box.querySelectorAll('.group-head .g-note-btn').forEach(function (btn) {
+      btn.addEventListener('click', function (ev) {
+        ev.stopPropagation();
+        var head = btn.closest('.group-head');
+        var g = state.groups[+head.getAttribute('data-gi')];
+        showNoteDialog('group', g.group, '');
       });
     });
     box.querySelectorAll('.card').forEach(function (card) {
@@ -390,7 +412,7 @@
       btn.addEventListener('click', function (ev) {
         ev.stopPropagation();
         var card = btn.closest('.card');
-        showNoteDialog(card.getAttribute('data-group'), card.getAttribute('data-name'));
+        showNoteDialog('egg', card.getAttribute('data-group'), card.getAttribute('data-name'));
       });
     });
 
@@ -622,12 +644,20 @@
 
   var noteTarget = null;
 
-  function showNoteDialog(group, name) {
-    noteTarget = { group: group, name: name };
-    var key = group + '/' + name;
+  function noteKey(type, group, name) {
+    return type === 'group' ? '#' + group : group + '/' + name;
+  }
+
+  function showNoteDialog(type, group, name) {
+    noteTarget = { type: type, group: group, name: name };
+    var key = noteKey(type, group, name);
+    var title = type === 'group' ? '📝 分组备注' : '📝 私人备注';
+    var desc = type === 'group'
+      ? esc(group) + ' —— 整组备注，用管理密码加密保存，别人看不到。点击「保存并发布」后生效。'
+      : esc(name) + '（' + esc(group) + '）—— 备注用管理密码加密保存，别人看不到。点击「保存并发布」后生效。';
     openDialog(
-      '<h3>📝 私人备注</h3>' +
-      '<div class="desc">' + esc(name) + '（' + esc(group) + '）—— 备注用管理密码加密保存，别人看不到。点击「保存并发布」后生效。</div>' +
+      '<h3>' + title + '</h3>' +
+      '<div class="desc">' + desc + '</div>' +
       '<textarea id="noteText" spellcheck="false">' + esc(state.notes[key] || '') + '</textarea>' +
       '<div class="btns"><span></span><span class="right">' +
       '<button class="btn" onclick="closeDialog()">取消</button>' +
@@ -639,7 +669,7 @@
 
   window.app_saveNote = function () {
     if (!noteTarget) return;
-    var key = noteTarget.group + '/' + noteTarget.name;
+    var key = noteKey(noteTarget.type, noteTarget.group, noteTarget.name);
     var val = document.getElementById('noteText').value.trim();
     if (val) state.notes[key] = val;
     else delete state.notes[key];
