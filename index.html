@@ -76,6 +76,7 @@
     padding: 11px 16px; border-radius: 14px; cursor: pointer;
     border: 1px solid; user-select: none;
     transition: filter .15s;
+    position: sticky; top: var(--toolbar-h, 96px); z-index: 8;
   }
   .group-head:hover { filter: brightness(.97); }
   .group-head .gdot { width: 12px; height: 12px; border-radius: 50%; flex-shrink: 0; }
@@ -318,6 +319,13 @@
 (function () {
   var STORAGE_KEY = 'roco_egg_menu_v2';
   var API_URL = '';
+
+  function updateToolbarH() {
+    var tb = document.querySelector('.toolbar');
+    if (tb) document.documentElement.style.setProperty('--toolbar-h', tb.offsetHeight + 'px');
+  }
+  window.addEventListener('resize', updateToolbarH);
+  updateToolbarH();
   var PALETTE = [
     { dot: '#f59e0b', bg: '#fef3d6', bd: '#f7dfa8', fg: '#a16207' },
     { dot: '#3b82f6', bg: '#e6effe', bd: '#c3d9fb', fg: '#1d4ed8' },
@@ -559,6 +567,7 @@
   }
 
   function render() {
+    updateToolbarH();
     var total = 0;
     state.groups.forEach(function (g) { total += g.names.length; });
     document.getElementById('statTotal').textContent = total;
