@@ -284,7 +284,6 @@
       <input id="searchInput" type="text" placeholder="搜索宠物名或分组…" autocomplete="off">
     </div>
     <button class="btn" id="foldBtn">全部折叠</button>
-    <button class="btn" id="resetBtn">恢复初始</button>
     <button class="btn warn" id="adminBtn">⚙ 管理数据</button>
     <button class="btn primary" id="exportBtn">导出备份</button>
   </div>
@@ -705,16 +704,6 @@
     var anyExpanded = state.groups.some(function (g) { return !state.collapsed[g.group]; });
     state.groups.forEach(function (g) { state.collapsed[g.group] = anyExpanded; });
     render();
-  });
-
-  document.getElementById('resetBtn').addEventListener('click', function () {
-    if (confirm('确定恢复为初始数据吗？当前浏览器里的修改会被清除。')) {
-      localStorage.removeItem(STORAGE_KEY);
-      state.groups = parseLines(DEFAULT_TEXT);
-      state.collapsed = {};
-      render();
-      toast('已恢复初始数据');
-    }
   });
 
   document.getElementById('exportBtn').addEventListener('click', function () {
