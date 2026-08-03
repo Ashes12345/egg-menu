@@ -44,6 +44,7 @@
   }
   .group-nav .gn-item:active { transform: scale(.96); }
   .group-nav .gn-item:hover { border-color: #c9cfe4; }
+  .group-nav .gn-item.active { background: #6b7bf7; border-color: #6b7bf7; color: #fff; }
   .search { flex: 1; min-width: 200px; position: relative; }
   .search input {
     width: 100%; padding: 10px 14px 10px 38px; font-size: 14px;
@@ -122,6 +123,7 @@
     font-size: 15px; font-weight: 600; color: #2d3350;
     word-break: break-all; line-height: 1.4; text-align: center;
   }
+  .hl { background: #fde68a; border-radius: 3px; padding: 0 1px; }
   .card .copy-hint {
     position: absolute; left: 0; right: 0; bottom: 0; height: 34px;
     background: linear-gradient(to top, rgba(107,123,247,.12), transparent);
@@ -273,7 +275,7 @@
   <div class="header">
     <div>
       <div class="title"><span class="emoji">🥚</span>洛克王国 · 孵蛋交换菜单</div>
-      <div class="subtitle">点击卡片可直接复制宠物名</div>
+      <div class="subtitle">点击卡片可直接复制宠物名<span id="updTime"></span></div>
     </div>
     <div class="stat">共 <b id="statTotal">0</b> 种现蛋 · <b id="statGroups">0</b> 个分组</div>
   </div>
@@ -346,7 +348,7 @@
     '大粗：急躁亚龙×1，平和骨龙×1，固执海豹×1，固执冰乌达×1，开朗狮鹫×1，急躁海豹×1，急躁独角兽×1，胆小依兰龙×1'
   ].join('\n');
 
-  var state = { groups: load(), query: '', collapsed: {}, notes: {} };
+  var state = { groups: load(), query: '', collapsed: loadCollapsed(), notes: {} };
 
   var ALIASES = {
     '火冰乌达': '乌达（极昼的样子）',
@@ -490,6 +492,18 @@ function load() {
     try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.groups)); } catch (e) {}
   }
 
+  function loadCollapsed() {
+    try {
+      var raw = localStorage.getItem('roco_menu_collapsed');
+      var obj = raw ? JSON.parse(raw) : {};
+      return obj && typeof obj === 'object' ? obj : {};
+    } catch (e) { return {}; }
+  }
+
+  function saveCollapsed() {
+    try { localStorage.setItem('roco_menu_collapsed', JSON.stringify(state.collapsed)); } catch (e) {}
+  }
+
   function splitNames(s) {
     return s.split(/[|，,、]/).map(function (t) { return t.trim(); }).filter(Boolean);
   }
@@ -558,6 +572,15 @@ function load() {
     return s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
   }
 
+  function hl(s) {
+    var safe = esc(s);
+    if (!state.query.trim()) return safe;
+    var q;
+    try { q = state.query.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); } catch (e) { return safe; }
+    var rx = new RegExp('(' + esc(q) + ')', 'gi');
+    return safe.replace(rx, '<span class="hl">$1</span>');
+  }
+
   function filteredGroups() {
     var q = state.query.trim().toLowerCase();
     return state.groups.map(function (g) {
@@ -588,6 +611,7 @@ function load() {
       var a = document.createElement('span');
       a.className = 'gn-item';
       a.innerHTML = esc(g.group);
+      a.setAttribute('data-gname', g.group);
       a.addEventListener('click', function () {
         var target = null;
         box.querySelectorAll('.section').forEach(function (s) {
@@ -608,7 +632,7 @@ function load() {
       sec.innerHTML =
         '<div class="group-head" style="background:' + c.bg + ';border-color:' + c.bd + '" data-gi="' + gi + '">' +
         '<span class="gdot" style="background:' + c.dot + '"></span>' +
-        '<span class="gname" style="color:' + c.fg + '">' + esc(g.group) + '</span>' +
+        '<span class="gname" style="color:' + c.fg + '">' + hl(g.group) + '</span>' +
         (isAdmin() ? '<button class="g-note-btn" title="编辑分组备注">📝</button>' : '') +
         (gHasNote ? '<span class="g-dot" title="有备注"></span>' : '') +
         '<span class="chev">▼</span>' +
@@ -636,7 +660,7 @@ function load() {
             (isAdmin() ? '<button class="note-btn" title="编辑备注">📝</button>' : '') +
             imgHtml +
             noHtml +
-            '<div class="name">' + esc(eggName(name)) + '</div>' +
+            '<div class="name">' + hl(eggName(name)) + '</div>' +
             '<div class="copy-hint">点击复制</div>' +
             '</div>';
         }).join('') +
@@ -648,6 +672,7 @@ function load() {
       head.addEventListener('click', function (ev) {
         var name = state.groups[+head.getAttribute('data-gi')].group;
         state.collapsed[name] = !state.collapsed[name];
+        saveCollapsed();
         render();
       });
     });
@@ -674,6 +699,7 @@ function load() {
 
     var anyExpanded = state.groups.some(function (g) { return !state.collapsed[g.group]; });
     document.getElementById('foldBtn').textContent = anyExpanded ? '全部折叠' : '全部展开';
+    updateNavActive();
   }
 
   var toastTimer = null;
@@ -722,6 +748,7 @@ function load() {
   document.getElementById('foldBtn').addEventListener('click', function () {
     var anyExpanded = state.groups.some(function (g) { return !state.collapsed[g.group]; });
     state.groups.forEach(function (g) { state.collapsed[g.group] = anyExpanded; });
+    saveCollapsed();
     render();
   });
 
@@ -964,6 +991,7 @@ function load() {
       }
       save();
       render();
+      setUpdateTime(Date.now());
       return encryptNotes(pw, state.notes).then(function (payload) {
         return fetch(API_URL + '/api/notes', {
           method: 'POST',
@@ -1062,13 +1090,14 @@ function load() {
     return fetch('/api/data?t=' + Date.now())
       .then(function (r) {
         if (!r.ok) throw new Error('bad status');
+        var ts = r.headers.get('X-Data-Updated');
+        if (ts) setUpdateTime(+ts);
         return r.text();
       })
       .then(function (text) {
         var list = parseLines(text);
         if (list.length) {
           state.groups = list;
-          state.collapsed = {};
           save();
           render();
         }
@@ -1082,13 +1111,40 @@ function load() {
         var list = parseLines(text);
         if (list.length) {
           state.groups = list;
-          state.collapsed = {};
           save();
           render();
         }
       })
       .catch(function () {});
   });
+
+  function setUpdateTime(ts) {
+    var el = document.getElementById('updTime');
+    if (!el) return;
+    if (!ts) { el.textContent = ''; return; }
+    var d = new Date(ts);
+    var pad = function (n) { return n < 10 ? '0' + n : '' + n; };
+    el.textContent = ' · 更新于 ' + (d.getMonth() + 1) + '月' + d.getDate() + '日 ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  }
+
+  function updateNavActive() {
+    var nav = document.getElementById('groupNav');
+    if (!nav) return;
+    var items = nav.querySelectorAll('.gn-item');
+    if (!items.length) return;
+    var found = null;
+    var box = document.getElementById('sections');
+    var toolbarH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')) || 96;
+    box.querySelectorAll('.section').forEach(function (s) {
+      var r = s.getBoundingClientRect();
+      if (r.top <= toolbarH + 24) found = s.getAttribute('data-gname');
+    });
+    items.forEach(function (a) {
+      a.classList.toggle('active', a.getAttribute('data-gname') === found);
+    });
+  }
+  window.addEventListener('scroll', updateNavActive, { passive: true });
+  window.addEventListener('resize', updateNavActive);
 })();
 </script>
 </body>

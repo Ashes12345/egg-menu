@@ -12,9 +12,10 @@ const DEFAULT_DATA = `大婉固执：水滴蛇，火冰乌达，海葵，罗隐�
 
 export async function onRequestGet(context) {
   const data = await context.env.EGG_KV.get('menu');
-  return new Response(data || DEFAULT_DATA, {
-    headers: { 'Content-Type': 'text/plain; charset=utf-8' }
-  });
+  const ts = await context.env.EGG_KV.get('menu_ts');
+  const headers = { 'Content-Type': 'text/plain; charset=utf-8' };
+  if (ts) headers['X-Data-Updated'] = ts;
+  return new Response(data || DEFAULT_DATA, { headers });
 }
 
 export async function onRequestPost(context) {
@@ -27,5 +28,6 @@ export async function onRequestPost(context) {
     return new Response('empty', { status: 400 });
   }
   await context.env.EGG_KV.put('menu', body);
+  await context.env.EGG_KV.put('menu_ts', String(Date.now()));
   return new Response('ok', { status: 200 });
 }
