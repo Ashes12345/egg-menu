@@ -446,8 +446,13 @@
     return d ? parseInt(d[0].no, 10) : 0;
   }
 
-  function sortedNames(g) {
-    return g.names.map(function (n) { return { name: n, no: petNo(eggBase(n)) }; })
+  function visibleNames(g) {
+    if (isAdmin()) return g.names;
+    return g.names.filter(function (n) { return eggCount(n) > 0; });
+  }
+
+  function sortedNames(names) {
+    return names.map(function (n) { return { name: n, no: petNo(eggBase(n)) }; })
       .sort(function (a, b) {
         if (a.no && b.no) return a.no - b.no;
         if (a.no) return -1;
@@ -556,21 +561,22 @@
 
   function filteredGroups() {
     var q = state.query.trim().toLowerCase();
-    if (!q) return state.groups.map(function (g) { return { group: g.group, names: sortedNames(g) }; });
     return state.groups.map(function (g) {
+      var visible = visibleNames(g);
       var matchGroup = g.group.toLowerCase().indexOf(q) !== -1;
-      if (matchGroup) return { group: g.group, names: sortedNames(g) };
-      var names = g.names.filter(function (n) { return eggBase(n).toLowerCase().indexOf(q) !== -1; });
+      if (!q || matchGroup) return { group: g.group, names: sortedNames(visible) };
+      var names = visible.filter(function (n) { return eggBase(n).toLowerCase().indexOf(q) !== -1; });
       return { group: g.group, names: names };
     }).filter(function (g) { return g.names.length; });
   }
 
   function render() {
     updateToolbarH();
+    var list = filteredGroups();
     var total = 0;
-    state.groups.forEach(function (g) { total += g.names.length; });
+    list.forEach(function (g) { total += g.names.length; });
     document.getElementById('statTotal').textContent = total;
-    document.getElementById('statGroups').textContent = state.groups.length;
+    document.getElementById('statGroups').textContent = list.length;
 
     var list = filteredGroups();
     var box = document.getElementById('sections');
