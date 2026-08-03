@@ -620,7 +620,7 @@
             noHtml = '<span class="pet-no">NO.' + noSet.join('/') + '</span>';
           }
           return '<div class="card" data-name="' + esc(eggBase(name)) + '" data-group="' + esc(g.group) + '">' +
-            '<span class="idx">' + (i + 1) + '</span>' +
+            '<span class="idx"></span>' +
             (hasNote ? '<span class="note-dot" title="有备注"></span>' : '') +
             (isAdmin() ? '<button class="note-btn" title="编辑备注">📝</button>' : '') +
             imgHtml +
