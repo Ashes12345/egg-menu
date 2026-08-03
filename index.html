@@ -675,8 +675,50 @@
     else delete state.notes[key];
     render();
     closeDialog();
-    toast('备注已保存（记得「保存并发布」上传到云端）');
+    toast('备注已保存，正在发布…');
+    publishAll('备注已保存并发布！所有人刷新即可看到');
   };
+
+  function publishAll(successMsg) {
+    var pw = getPw();
+    if (!pw) {
+      toast('未登录，无法发布');
+      showAdminLogin();
+      return;
+    }
+    var text = serialize();
+    fetch(API_URL + '/api/data', {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8', 'Authorization': 'Bearer ' + pw },
+      body: text
+    }).then(function (r) {
+      if (r.status === 401) {
+        sessionStorage.removeItem('egg_admin_pw');
+        toast('密码错误或已失效，请重新登录');
+        showAdminLogin();
+        return null;
+      }
+      if (!r.ok) {
+        toast('发布失败（' + r.status + '），请稍后重试');
+        return null;
+      }
+      save();
+      render();
+      return encryptNotes(pw, state.notes).then(function (payload) {
+        return fetch(API_URL + '/api/notes', {
+          method: 'POST',
+          headers: { 'Authorization': 'Bearer ' + pw },
+          body: payload
+        });
+      });
+    }).then(function (rn) {
+      if (rn === null) return;
+      if (!rn.ok) toast('菜单已发布，但备注发布失败（' + rn.status + '）');
+      else toast(successMsg);
+    }).catch(function () {
+      toast('网络错误，无法连接服务器');
+    });
+  }
 
   window.app_addEgg = function () {
     var group = document.getElementById('addGroup').value;
@@ -704,40 +746,11 @@
     var text = document.getElementById('adminText').value;
     var list = parseLines(text);
     if (!list.length) { toast('数据格式不对，请检查'); return; }
-    var pw = getPw();
-    fetch(API_URL + '/api/data', {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8', 'Authorization': 'Bearer ' + pw },
-      body: text
-    }).then(function (r) {
-      if (r.status === 401) {
-        sessionStorage.removeItem('egg_admin_pw');
-        toast('密码错误，请重新输入');
-        showAdminLogin();
-        return;
-      }
-      if (!r.ok) { toast('发布失败（' + r.status + '），请稍后重试'); return; }
-      state.groups = list;
-      state.collapsed = {};
-      save();
-      render();
-      closeDialog();
-      toast('菜单已发布！');
-      encryptNotes(pw, state.notes).then(function (payload) {
-        return fetch(API_URL + '/api/notes', {
-          method: 'POST',
-          headers: { 'Authorization': 'Bearer ' + pw },
-          body: payload
-        });
-      }).then(function (rn) {
-        if (!rn.ok) toast('菜单已发布，但备注发布失败（' + rn.status + '）');
-        else toast('菜单和备注都已发布！');
-      }).catch(function () {
-        toast('菜单已发布，但备注发布失败（网络错误）');
-      });
-    }).catch(function () {
-      toast('网络错误，无法连接服务器');
-    });
+    state.groups = list;
+    state.collapsed = {};
+    closeDialog();
+    toast('正在发布…');
+    publishAll('菜单和备注都已发布！');
   };
 
   window.app_copyData = function () {
