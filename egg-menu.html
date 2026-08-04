@@ -53,6 +53,8 @@
     border-bottom: 1px solid rgba(230,233,242,.9);
     border-radius: 16px;
   }
+  .sticky-wrap.no-pin { position: static; box-shadow: none; }
+  .btn.pin-on { background: #6b7bf7; border-color: #6b7bf7; color: #fff; }
   .toolbar {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     padding: 10px 0 0;
@@ -384,6 +386,7 @@
         <span class="icon">🔍</span>
         <input id="searchInput" type="text" placeholder="搜索宠物名或分组…" autocomplete="off">
       </div>
+      <button class="btn" id="pinBtn" title="切换顶部是否吸顶">📌 置顶</button>
       <button class="btn" id="foldBtn">全部折叠</button>
       <button class="btn qq" id="qqBtn" title="点击即可复制QQ号">💬 换蛋联系QQ</button>
       <button class="btn warn" id="adminBtn">⚙ 管理数据</button>
@@ -1504,6 +1507,25 @@ var EGG_GROUPS = {
     clearTimeout(eggGroupTimer);
     document.getElementById('eggGroupPopup').classList.remove('show');
     showGroupMembers(tag.getAttribute('data-group'));
+  });
+
+  var PIN_KEY = 'roco_pin_top';
+  var pinned = localStorage.getItem(PIN_KEY) !== '0';
+  function applyPin() {
+    var wrap = document.querySelector('.sticky-wrap');
+    if (wrap) wrap.classList.toggle('no-pin', !pinned);
+    var b = document.getElementById('pinBtn');
+    if (b) {
+      b.textContent = pinned ? '📌 置顶' : '📌 未置顶';
+      b.classList.toggle('pin-on', pinned);
+    }
+  }
+  applyPin();
+  document.getElementById('pinBtn').addEventListener('click', function () {
+    pinned = !pinned;
+    try { localStorage.setItem(PIN_KEY, pinned ? '1' : '0'); } catch (e) {}
+    applyPin();
+    toast(pinned ? '已开启吸顶' : '已取消吸顶，将随页面滚动');
   });
 
   document.getElementById('foldBtn').addEventListener('click', function () {
