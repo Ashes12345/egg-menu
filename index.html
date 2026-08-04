@@ -1520,6 +1520,13 @@ var EGG_GROUPS = {
   function closeDialog() {
     document.getElementById('overlay').classList.remove('show');
   }
+  window.closeDialog = closeDialog;
+
+  window.app_logout = function () {
+    sessionStorage.removeItem('egg_admin_pw');
+    closeDialog();
+    toast('已退出管理，点击「⚙ 管理数据」可重新登录');
+  };
 
   document.getElementById('overlay').addEventListener('click', function (ev) {
     if (ev.target === this) closeDialog();
@@ -1719,6 +1726,7 @@ var EGG_GROUPS = {
       '<button class="ag-new" onclick="app_newGroup()">＋ 添加分组</button>' +
       '</div>' +
       '<div class="btns"><span class="right">' +
+      '<button class="btn" onclick="app_logout()">退出</button>' +
       '<button class="btn" onclick="closeDialog()">关闭</button>' +
       '<button class="btn primary" onclick="app_publish()">保存并发布</button>' +
       '</span></div>'
