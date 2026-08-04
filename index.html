@@ -54,9 +54,12 @@
     border-radius: 16px;
   }
   .sticky-inner { transition: max-height .28s ease; }
-  .sticky-wrap.pin-off .sticky-inner { max-height: 46px; overflow: hidden; cursor: pointer; }
+  .sticky-wrap.pin-off .view-tabs { display: none; }
+  .sticky-wrap.pin-off .sticky-inner { max-height: 140px; overflow: hidden; }
   .sticky-wrap.pin-off .sticky-inner:hover,
   .sticky-wrap.pin-off.force-open .sticky-inner { max-height: 460px; }
+  .sticky-wrap.pin-off .sticky-inner:hover .view-tabs,
+  .sticky-wrap.pin-off.force-open .sticky-inner .view-tabs { display: flex; }
   .pin-float {
     position: absolute; top: 12px; right: 14px; z-index: 15;
     width: 34px; height: 34px; border-radius: 50%;
