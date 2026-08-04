@@ -197,8 +197,19 @@
   .egg-group-popup .eg-groups { display: flex; gap: 6px; flex-wrap: wrap; justify-content: center; }
   .egg-group-popup .eg-tag {
     background: rgba(107,123,247,.25); color: #b4bfff; font-size: 13px; font-weight: 600;
-    padding: 3px 10px; border-radius: 8px;
+    padding: 3px 10px; border-radius: 8px; border: none; cursor: pointer;
   }
+  .egg-group-popup .eg-tag:hover { background: rgba(107,123,247,.45); }
+  .gm-list {
+    max-height: 46vh; overflow-y: auto; display: flex; flex-wrap: wrap;
+    gap: 8px; padding: 2px;
+  }
+  .gm-item {
+    flex: 0 0 auto; background: #eef1fb; border: 1px solid #dde3f7; color: #3a4168;
+    padding: 7px 12px; border-radius: 10px; font-size: 13px; cursor: pointer;
+  }
+  .gm-item:hover { background: #e6e9ff; border-color: #b9c4f5; }
+  .gm-empty { font-size: 12.5px; color: #8a90a8; }
   .egg-group-popup .eg-close {
     position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
     background: #4a5078; color: #fff; border: none; border-radius: 50%;
@@ -1253,15 +1264,47 @@ function load() {
     var base = resolved.replace(/（[^）]*）/, '');
     return EGG_GROUPS[base] || null;
   }
+  var GROUP_TO_EGGS = {};
+  function buildGroupIndex() {
+    var map = {};
+    state.groups.forEach(function (g) {
+      g.names.forEach(function (name) {
+        var base = eggBase(name);
+        var groups = lookupEggGroups(base);
+        if (!groups) return;
+        groups.forEach(function (grp) {
+          if (!map[grp]) map[grp] = [];
+          if (map[grp].indexOf(base) === -1) map[grp].push(base);
+        });
+      });
+    });
+    GROUP_TO_EGGS = map;
+  }
   function showEggGroupPopup(name) {
     var groups = lookupEggGroups(name);
     if (!groups || !groups.length) { toast('暂无蛋组信息'); return; }
+    buildGroupIndex();
     var tags = document.getElementById('eggGroupTags');
-    tags.innerHTML = groups.map(function (g) { return '<span class="eg-tag">' + g + '</span>'; }).join('');
+    tags.innerHTML = groups.map(function (g) {
+      var n = (GROUP_TO_EGGS[g] || []).length;
+      return '<button class="eg-tag" data-group="' + esc(g) + '">' + esc(g) + '·' + n + '只</button>';
+    }).join('');
     var popup = document.getElementById('eggGroupPopup');
     popup.classList.add('show');
     clearTimeout(eggGroupTimer);
     eggGroupTimer = setTimeout(function () { popup.classList.remove('show'); }, 3000);
+  }
+  function showGroupMembers(grp) {
+    var list = (GROUP_TO_EGGS[grp] || []).slice().sort();
+    var html = '<h3>' + esc(grp) + '（' + list.length + '只）</h3>';
+    if (!list.length) html += '<div class="gm-empty">该组暂无宠物</div>';
+    else html += '<div class="gm-list">' + list.map(function (n) {
+      return '<button class="gm-item" data-name="' + esc(n) + '">' + esc(n) + '</button>';
+    }).join('') + '</div>';
+    openDialog(html);
+    document.querySelectorAll('.gm-item').forEach(function (b) {
+      b.addEventListener('click', function () { copyText(b.getAttribute('data-name')); });
+    });
   }
   function hideEggGroupPopup() {
     document.getElementById('eggGroupPopup').classList.remove('show');
@@ -1300,6 +1343,14 @@ function load() {
 
   document.getElementById('overlay').addEventListener('click', function (ev) {
     if (ev.target === this) closeDialog();
+  });
+
+  document.getElementById('eggGroupPopup').addEventListener('click', function (ev) {
+    var tag = ev.target.closest('.eg-tag');
+    if (!tag) return;
+    clearTimeout(eggGroupTimer);
+    document.getElementById('eggGroupPopup').classList.remove('show');
+    showGroupMembers(tag.getAttribute('data-group'));
   });
 
   document.getElementById('foldBtn').addEventListener('click', function () {
