@@ -1065,6 +1065,7 @@ var EGG_GROUPS = {
 
   function visibleNames(g) {
     if (isAdmin()) return g.names;
+    if (state.tab === 'want') return g.names;
     return g.names.filter(function (n) { return eggCount(n) > 0; });
   }
 
@@ -1868,29 +1869,10 @@ var EGG_GROUPS = {
   render();
   loadDex();
 
-  var lastUpdatedTs = 0;
-  function loadRemote() {
-    return fetch(apiDataUrl())
-      .then(function (r) {
-        if (!r.ok) throw new Error('bad status');
-        var ts = r.headers.get('X-Data-Updated');
-        if (ts) { lastUpdatedTs = +ts; setUpdateTime(lastUpdatedTs); }
-        return r.text();
-      })
-      .then(function (text) {
-        var list = parseLines(text);
-        if (list.length && isCleanGroups(list)) {
-          state.groups = list;
-          if (state.tab === 'want') state.want = list;
-          else state.have = list;
-          save();
-          render();
-        }
-      });
-  }
+  var lastTs = { have: 0, want: 0 };
 
-  function pollUpdate() {
-    fetch(apiDataUrl())
+  function fetchTab(tab) {
+    return fetch((tab === 'want' ? '/api/want' : '/api/data') + '?t=' + Date.now())
       .then(function (r) {
         if (!r.ok) throw new Error('bad status');
         var ts = r.headers.get('X-Data-Updated');
@@ -1898,24 +1880,47 @@ var EGG_GROUPS = {
       })
       .then(function (res) {
         return Promise.resolve(res.text).then(function (text) {
-          if (!res.ts || res.ts === lastUpdatedTs) return;
-          lastUpdatedTs = res.ts;
           var list = parseLines(text);
-          if (!list.length || !isCleanGroups(list)) return;
-          var same = JSON.stringify(state.groups.map(function (g) { return { g: g.group, n: g.names.slice().sort() }; })) ===
-            JSON.stringify(list.map(function (g) { return { g: g.group, n: g.names.slice().sort() }; }));
-          if (same) { setUpdateTime(res.ts); return; }
-          state.groups = list;
-          if (state.tab === 'want') state.want = list;
-          else state.have = list;
-          save();
-          setUpdateTime(res.ts);
-          render();
-          toast('菜单已更新，快看看新蛋！');
+          if (!list.length || !isCleanGroups(list)) throw new Error('bad data');
+          if (!res.ts || res.ts === lastTs[tab]) return null;
+          lastTs[tab] = res.ts;
+          return list;
         });
       })
-      .catch(function () {});
+      .catch(function () { return null; });
   }
+
+  function applyList(tab, list) {
+    if (tab === 'want') state.want = list; else state.have = list;
+    if (state.tab === tab) {
+      state.groups = list;
+      save();
+      setUpdateTime(lastTs[tab]);
+      render();
+      return true;
+    }
+    try {
+      localStorage.setItem(tab === 'want' ? STORAGE_KEY_WANT : STORAGE_KEY, JSON.stringify(list));
+    } catch (e) {}
+    return false;
+  }
+
+  function loadRemote() {
+    return fetchTab(state.tab).then(function (list) {
+      if (list) applyList(state.tab, list);
+    });
+  }
+
+  function pollUpdate() {
+    ['have', 'want'].forEach(function (tab) {
+      fetchTab(tab).then(function (list) {
+        if (!list) return;
+        var active = applyList(tab, list);
+        if (active) toast('菜单已更新，快看看新蛋！');
+      });
+    });
+  }
+  pollUpdate();
   setInterval(pollUpdate, 30000);
 
   loadRemote().catch(function () {
