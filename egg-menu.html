@@ -391,7 +391,7 @@
 
   <div class="footer">
     洛克王国孵蛋交换菜单 · 交换愉快~<br>
-    数据来源：BiliWiki
+    数据来源：BiliWiki · v1.3
   </div>
 </div>
 
@@ -1116,21 +1116,25 @@ function loadGroup(key, fallbackText) {
 
   function switchTab(tab) {
     if (state.tab === tab) return;
-    save();
-    saveCollapsed();
-    if (state.tab === 'have') { state.have = state.groups; state.collapsedHave = state.collapsed; }
-    else { state.want = state.groups; state.collapsedWant = state.collapsed; }
-    state.tab = tab;
-    state.groups = tab === 'want' ? state.want : state.have;
-    state.collapsed = tab === 'want' ? state.collapsedWant : state.collapsedHave;
-    state.query = '';
-    var si = document.getElementById('searchInput');
-    if (si) si.value = '';
-    document.querySelectorAll('.view-tab').forEach(function (b) {
-      b.classList.toggle('active', b.getAttribute('data-tab') === tab);
-    });
-    render();
-    loadRemote().catch(function () {});
+    try {
+      save();
+      saveCollapsed();
+      if (state.tab === 'have') { state.have = state.groups; state.collapsedHave = state.collapsed; }
+      else { state.want = state.groups; state.collapsedWant = state.collapsed; }
+      state.tab = tab;
+      state.groups = tab === 'want' ? state.want : state.have;
+      state.collapsed = tab === 'want' ? state.collapsedWant : state.collapsedHave;
+      state.query = '';
+      var si = document.getElementById('searchInput');
+      if (si) si.value = '';
+      document.querySelectorAll('.view-tab').forEach(function (b) {
+        b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+      });
+      render();
+      loadRemote().catch(function () {});
+    } catch (e) {
+      toast('切换失败：' + e.message);
+    }
   }
 
   function splitNames(s) {
