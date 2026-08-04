@@ -53,24 +53,20 @@
     border-bottom: 1px solid rgba(230,233,242,.9);
     border-radius: 16px;
   }
-  .sticky-wrap.no-pin { position: static; box-shadow: none; }
-  .sticky-wrap.pin-off {
-    max-height: 46px; overflow: hidden; cursor: pointer;
-    transition: max-height .28s ease;
-  }
-  .sticky-wrap.pin-off:hover, .sticky-wrap.pin-off.force-open {
-    max-height: 460px;
-  }
+  .sticky-inner { transition: max-height .28s ease; }
+  .sticky-wrap.pin-off .sticky-inner { max-height: 46px; overflow: hidden; cursor: pointer; }
+  .sticky-wrap.pin-off .sticky-inner:hover,
+  .sticky-wrap.pin-off.force-open .sticky-inner { max-height: 460px; }
   .pin-float {
-    position: fixed; top: 10px; right: 18px; z-index: 20;
-    width: 40px; height: 40px; border-radius: 50%;
+    position: absolute; top: 12px; right: 14px; z-index: 15;
+    width: 34px; height: 34px; border-radius: 50%;
     border: 1px solid #dde1ee; background: #fff;
-    box-shadow: 0 4px 14px rgba(30,40,90,.14);
-    font-size: 17px; cursor: pointer; line-height: 1;
+    box-shadow: 0 3px 10px rgba(30,40,90,.14);
+    font-size: 15px; cursor: pointer; line-height: 1;
     display: flex; align-items: center; justify-content: center;
-    transition: background .15s, color .15s, transform .15s;
+    transition: background .15s, transform .15s;
   }
-  .pin-float:hover { transform: scale(1.06); }
+  .pin-float:hover { transform: scale(1.08); }
   .pin-float.pin-on { background: #6b7bf7; border-color: #6b7bf7; }
   .toolbar {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -393,22 +389,25 @@
   </div>
 
   <div class="sticky-wrap">
-    <div class="view-tabs">
-      <button class="view-tab active" data-tab="have">🥚 我有的蛋</button>
-      <button class="view-tab" data-tab="want">🎯 我需要的蛋</button>
-    </div>
-
-    <div class="toolbar">
-      <div class="search">
-        <span class="icon">🔍</span>
-        <input id="searchInput" type="text" placeholder="搜索宠物名或分组…" autocomplete="off">
+    <div class="sticky-inner">
+      <div class="view-tabs">
+        <button class="view-tab active" data-tab="have">🥚 我有的蛋</button>
+        <button class="view-tab" data-tab="want">🎯 我需要的蛋</button>
       </div>
-      <button class="btn" id="foldBtn">全部折叠</button>
-      <button class="btn qq" id="qqBtn" title="点击即可复制QQ号">💬 换蛋联系QQ</button>
-      <button class="btn warn" id="adminBtn">⚙ 管理数据</button>
-      <button class="btn primary" id="exportBtn">导出备份</button>
-      <div id="groupNav" class="group-nav"></div>
+
+      <div class="toolbar">
+        <div class="search">
+          <span class="icon">🔍</span>
+          <input id="searchInput" type="text" placeholder="搜索宠物名或分组…" autocomplete="off">
+        </div>
+        <button class="btn" id="foldBtn">全部折叠</button>
+        <button class="btn qq" id="qqBtn" title="点击即可复制QQ号">💬 换蛋联系QQ</button>
+        <button class="btn warn" id="adminBtn">⚙ 管理数据</button>
+        <button class="btn primary" id="exportBtn">导出备份</button>
+        <div id="groupNav" class="group-nav"></div>
+      </div>
     </div>
+    <button class="pin-float" id="pinFloat" title="吸顶开关：置顶/收起">📌</button>
   </div>
 
   <div id="sections"></div>
@@ -421,8 +420,6 @@
     数据来源：BiliWiki · v1.3
   </div>
   </div>
-
-  <button class="pin-float" id="pinFloat" title="吸顶开关：置顶/收起">📌</button>
 
   <div class="toast" id="toast"></div>
 <div class="egg-group-popup" id="eggGroupPopup">
@@ -1531,14 +1528,18 @@ var EGG_GROUPS = {
   var pinned = localStorage.getItem(PIN_KEY) !== '0';
   function applyPin() {
     var wrap = document.querySelector('.sticky-wrap');
-    if (wrap) wrap.classList.toggle('pin-off', !pinned);
+    if (wrap) {
+      wrap.classList.toggle('pin-off', !pinned);
+      if (pinned) wrap.classList.remove('force-open');
+    }
     var b = document.getElementById('pinFloat');
     if (b) b.classList.toggle('pin-on', pinned);
   }
   applyPin();
   var pinWrap = document.querySelector('.sticky-wrap');
   if (pinWrap) {
-    pinWrap.addEventListener('click', function () {
+    pinWrap.addEventListener('click', function (ev) {
+      if (ev.target.closest('.pin-float')) return;
       if (!pinned) pinWrap.classList.toggle('force-open');
     });
   }
