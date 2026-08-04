@@ -1076,12 +1076,27 @@ var EGG_GROUPS = {
       .map(function (x) { return x.name; });
   }
 
-function loadGroup(key, fallbackText) {
+  function isCleanGroups(list) {
+    if (!Array.isArray(list) || !list.length) return false;
+    for (var i = 0; i < list.length; i++) {
+      var g = list[i];
+      if (!g || typeof g.group !== 'string' || !Array.isArray(g.names)) return false;
+      if (g.group.indexOf('<') !== -1 || g.group.indexOf('>') !== -1 || g.group.length > 30) return false;
+      for (var j = 0; j < g.names.length; j++) {
+        var n = g.names[j];
+        if (typeof n !== 'string' || !n.length) return false;
+        if (n.indexOf('<') !== -1 || n.indexOf('>') !== -1 || n.indexOf('&') !== -1 || n.length > 40) return false;
+      }
+    }
+    return true;
+  }
+
+  function loadGroup(key, fallbackText) {
     try {
       var raw = localStorage.getItem(key);
       if (raw) {
         var arr = JSON.parse(raw);
-        if (Array.isArray(arr) && arr.length) return arr;
+        if (isCleanGroups(arr)) return arr;
       }
     } catch (e) {}
     return parseLines(fallbackText);
@@ -1853,7 +1868,7 @@ function loadGroup(key, fallbackText) {
       })
       .then(function (text) {
         var list = parseLines(text);
-        if (list.length) {
+        if (list.length && isCleanGroups(list)) {
           state.groups = list;
           if (state.tab === 'want') state.want = list;
           else state.have = list;
@@ -1875,7 +1890,7 @@ function loadGroup(key, fallbackText) {
           if (!res.ts || res.ts === lastUpdatedTs) return;
           lastUpdatedTs = res.ts;
           var list = parseLines(text);
-          if (!list.length) return;
+          if (!list.length || !isCleanGroups(list)) return;
           var same = JSON.stringify(state.groups.map(function (g) { return { g: g.group, n: g.names.slice().sort() }; })) ===
             JSON.stringify(list.map(function (g) { return { g: g.group, n: g.names.slice().sort() }; }));
           if (same) { setUpdateTime(res.ts); return; }
