@@ -132,7 +132,9 @@
   }
   .card .name {
     font-size: 15px; font-weight: 600; color: #2d3350;
-    word-break: break-all; line-height: 1.4; text-align: center;
+    line-height: 1.4; text-align: center;
+    display: -webkit-box; -webkit-box-orient: vertical; -webkit-line-clamp: 2;
+    overflow: hidden; min-height: 42px;
   }
   .hl { background: #fde68a; border-radius: 3px; padding: 0 1px; }
   .card .copy-hint {
@@ -334,7 +336,7 @@
     .card .pet-img:first-child { width: 64px; height: 64px; }
     .card .count-badge { min-width: 17px; height: 17px; font-size: 10px; right: -3px; bottom: -1px; }
     .card .pet-no { font-size: 9.5px; margin-bottom: 1px; }
-    .card .name { font-size: 12.5px; line-height: 1.3; }
+    .card .name { font-size: 12.5px; line-height: 1.3; min-height: 33px; }
     .card .copy-hint { height: 26px; font-size: 10px; padding-bottom: 5px; border-radius: 0 0 12px 12px; }
     .card .note-dot { top: 5px; left: 8px; width: 7px; height: 7px; }
     .card .note-btn { top: 4px; right: 22px; font-size: 12px; }
