@@ -1043,7 +1043,12 @@ var EGG_GROUPS = {
         if (dexList[j].name === target[i]) hits.push(dexList[j]);
       }
     }
-    return hits.length ? hits : null;
+    if (hits.length) return hits;
+    var sub = [];
+    for (var k = 0; k < dexList.length; k++) {
+      if (dexList[k].name.indexOf(name) !== -1) sub.push(dexList[k]);
+    }
+    return sub.length === 1 ? sub : null;
   }
 
   function petNo(name) {
