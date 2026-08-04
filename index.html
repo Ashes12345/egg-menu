@@ -1962,14 +1962,14 @@ var EGG_GROUPS = {
       .catch(function () { return null; });
   }
 
-  function applyList(tab, list) {
+  function applyList(tab, list, silent) {
     if (tab === 'want') state.want = list; else state.have = list;
     if (state.tab === tab) {
       state.groups = list;
       save();
       setUpdateTime(lastTs[tab]);
       render();
-      return true;
+      return !silent;
     }
     try {
       localStorage.setItem(tab === 'want' ? STORAGE_KEY_WANT : STORAGE_KEY, JSON.stringify(list));
@@ -1979,18 +1979,20 @@ var EGG_GROUPS = {
 
   function loadRemote() {
     return fetchTab(state.tab).then(function (list) {
-      if (list) applyList(state.tab, list);
+      if (list) applyList(state.tab, list, true);
     });
   }
 
+  var firstPoll = true;
   function pollUpdate() {
     ['have', 'want'].forEach(function (tab) {
       fetchTab(tab).then(function (list) {
         if (!list) return;
-        var active = applyList(tab, list);
-        if (active) toast('菜单已更新，快看看新蛋！');
+        var active = applyList(tab, list, firstPoll);
+        if (active && !firstPoll) toast('菜单已更新，快看看新蛋！');
       });
     });
+    firstPoll = false;
   }
   pollUpdate();
   setInterval(pollUpdate, 30000);
