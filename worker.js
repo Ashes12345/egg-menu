@@ -56,9 +56,6 @@ export default {
         return new Response('unauthorized', { status: 401, headers: CORS });
       }
       const body = await request.text();
-      if (!body.trim()) {
-        return new Response('empty', { status: 400, headers: CORS });
-      }
       await env.EGG_KV.put('menu_want', body);
       return new Response('ok', { status: 200, headers: CORS });
     }

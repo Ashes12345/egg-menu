@@ -1621,7 +1621,7 @@ function loadGroup(key, fallbackText) {
       '<div class="desc">' + (isWant ? '填写你需要的蛋（无需数量），保存后访问者即可看到你的需求。' : '编辑蛋名与数量，保存后发布到线上，所有人刷新即可看到。数量会显示在蛋卡图片右下角。') + '</div>' +
       '<div class="btns" style="margin-top:0;margin-bottom:10px"><span class="left">' +
       '<button class="btn" onclick="app_switchEdit()">切换到' + (isWant ? '我有蛋' : '我需要的蛋') + '</button>' +
-      (isWant ? '' : '<button class="btn" onclick="app_setAllCount(1)">全部数量设为 1</button>' +
+      (isWant ? '<button class="btn" onclick="app_clearWant()">🗑 清空我需要的蛋</button>' : '<button class="btn" onclick="app_setAllCount(1)">全部数量设为 1</button>' +
         '<button class="btn" onclick="app_setAllCount(0)">全部数量设为 0</button>') +
       '</span></div>' +
       '<div class="admin-list">' + listHtml +
@@ -1637,6 +1637,17 @@ function loadGroup(key, fallbackText) {
   window.app_switchEdit = function () {
     switchTab(state.tab === 'want' ? 'have' : 'want');
     showAdminEditor();
+  };
+
+  window.app_clearWant = function () {
+    if (!confirm('清空「我需要的蛋」并删除脏数据？')) return;
+    state.want = [];
+    state.groups = [];
+    state.collapsedWant = {};
+    try { localStorage.setItem(STORAGE_KEY_WANT, '[]'); } catch (e) {}
+    render();
+    toast('已清空，正在发布空列表…');
+    publishAll('已清空并发布，请重新填写你需要的蛋');
   };
 
   window.app_login = function () {
