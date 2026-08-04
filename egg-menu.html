@@ -67,6 +67,8 @@
   .btn.primary:hover { background: #5a6af0; }
   .btn.warn { background: #f59e0b; border-color: #f59e0b; color: #fff; }
   .btn.warn:hover { background: #d97706; }
+  .btn.qq { background: #ff9d2e; border-color: #ff9d2e; color: #fff; font-weight: 700; }
+  .btn.qq:hover { background: #f58a0e; }
 
   .section { margin-top: 20px; }
   .group-head {
@@ -286,6 +288,7 @@
       <input id="searchInput" type="text" placeholder="搜索宠物名或分组…" autocomplete="off">
     </div>
     <button class="btn" id="foldBtn">全部折叠</button>
+    <button class="btn qq" id="qqBtn" title="换蛋请联系QQ">💬 换蛋联系QQ</button>
     <button class="btn warn" id="adminBtn">⚙ 管理数据</button>
     <button class="btn primary" id="exportBtn">导出备份</button>
     <div id="groupNav" class="group-nav"></div>
@@ -300,7 +303,7 @@
     💡 操作提示：点击卡片复制名字 → 粘贴。点分组标题可折叠/展开。
   </div>
 
-  <div class="footer">洛克王国孵蛋交换菜单 · 换蛋请联系QQ:2849785944 · 交换愉快~</div>
+  <div class="footer">洛克王国孵蛋交换菜单 · 交换愉快~</div>
 </div>
 
 <div class="toast" id="toast"></div>
@@ -1092,6 +1095,10 @@ function load() {
   document.getElementById('adminBtn').addEventListener('click', function () {
     if (getPw()) showAdminEditor();
     else showAdminLogin();
+  });
+
+  document.getElementById('qqBtn').addEventListener('click', function () {
+    copyText('2849785944');
   });
 
   document.getElementById('searchInput').addEventListener('input', function (ev) {
