@@ -54,12 +54,18 @@
     border-radius: 16px;
   }
   .sticky-inner { transition: max-height .28s ease; }
-  .sticky-wrap.pin-off .view-tabs { display: none; }
-  .sticky-wrap.pin-off .sticky-inner { max-height: 140px; overflow: hidden; }
+  .sticky-wrap.pin-off .view-tabs,
+  .sticky-wrap.pin-off .search,
+  .sticky-wrap.pin-off .toolbar .btn { display: none; }
+  .sticky-wrap.pin-off .sticky-inner { max-height: 66px; overflow: hidden; }
   .sticky-wrap.pin-off .sticky-inner:hover,
   .sticky-wrap.pin-off.force-open .sticky-inner { max-height: 460px; }
   .sticky-wrap.pin-off .sticky-inner:hover .view-tabs,
   .sticky-wrap.pin-off.force-open .sticky-inner .view-tabs { display: flex; }
+  .sticky-wrap.pin-off .sticky-inner:hover .search,
+  .sticky-wrap.pin-off.force-open .sticky-inner .search { display: block; }
+  .sticky-wrap.pin-off .sticky-inner:hover .toolbar .btn,
+  .sticky-wrap.pin-off.force-open .sticky-inner .toolbar .btn { display: inline-block; }
   .pin-float {
     position: absolute; top: 12px; right: 14px; z-index: 15;
     width: 34px; height: 34px; border-radius: 50%;
