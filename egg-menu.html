@@ -54,7 +54,24 @@
     border-radius: 16px;
   }
   .sticky-wrap.no-pin { position: static; box-shadow: none; }
-  .btn.pin-on { background: #6b7bf7; border-color: #6b7bf7; color: #fff; }
+  .sticky-wrap.pin-off {
+    max-height: 46px; overflow: hidden; cursor: pointer;
+    transition: max-height .28s ease;
+  }
+  .sticky-wrap.pin-off:hover, .sticky-wrap.pin-off.force-open {
+    max-height: 460px;
+  }
+  .pin-float {
+    position: fixed; top: 10px; right: 18px; z-index: 20;
+    width: 40px; height: 40px; border-radius: 50%;
+    border: 1px solid #dde1ee; background: #fff;
+    box-shadow: 0 4px 14px rgba(30,40,90,.14);
+    font-size: 17px; cursor: pointer; line-height: 1;
+    display: flex; align-items: center; justify-content: center;
+    transition: background .15s, color .15s, transform .15s;
+  }
+  .pin-float:hover { transform: scale(1.06); }
+  .pin-float.pin-on { background: #6b7bf7; border-color: #6b7bf7; }
   .toolbar {
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
     padding: 10px 0 0;
@@ -386,7 +403,6 @@
         <span class="icon">🔍</span>
         <input id="searchInput" type="text" placeholder="搜索宠物名或分组…" autocomplete="off">
       </div>
-      <button class="btn" id="pinBtn" title="切换顶部是否吸顶">📌 置顶</button>
       <button class="btn" id="foldBtn">全部折叠</button>
       <button class="btn qq" id="qqBtn" title="点击即可复制QQ号">💬 换蛋联系QQ</button>
       <button class="btn warn" id="adminBtn">⚙ 管理数据</button>
@@ -404,9 +420,11 @@
     洛克王国孵蛋交换菜单 · 交换愉快~<br>
     数据来源：BiliWiki · v1.3
   </div>
-</div>
+  </div>
 
-<div class="toast" id="toast"></div>
+  <button class="pin-float" id="pinFloat" title="吸顶开关：置顶/收起">📌</button>
+
+  <div class="toast" id="toast"></div>
 <div class="egg-group-popup" id="eggGroupPopup">
   <button class="eg-close" onclick="hideEggGroupPopup()">×</button>
   <div class="eg-title">蛋组</div>
@@ -1513,19 +1531,22 @@ var EGG_GROUPS = {
   var pinned = localStorage.getItem(PIN_KEY) !== '0';
   function applyPin() {
     var wrap = document.querySelector('.sticky-wrap');
-    if (wrap) wrap.classList.toggle('no-pin', !pinned);
-    var b = document.getElementById('pinBtn');
-    if (b) {
-      b.textContent = pinned ? '📌 置顶' : '📌 未置顶';
-      b.classList.toggle('pin-on', pinned);
-    }
+    if (wrap) wrap.classList.toggle('pin-off', !pinned);
+    var b = document.getElementById('pinFloat');
+    if (b) b.classList.toggle('pin-on', pinned);
   }
   applyPin();
-  document.getElementById('pinBtn').addEventListener('click', function () {
+  var pinWrap = document.querySelector('.sticky-wrap');
+  if (pinWrap) {
+    pinWrap.addEventListener('click', function () {
+      if (!pinned) pinWrap.classList.toggle('force-open');
+    });
+  }
+  document.getElementById('pinFloat').addEventListener('click', function () {
     pinned = !pinned;
     try { localStorage.setItem(PIN_KEY, pinned ? '1' : '0'); } catch (e) {}
     applyPin();
-    toast(pinned ? '已开启吸顶' : '已取消吸顶，将随页面滚动');
+    toast(pinned ? '顶栏已展开并固定' : '顶栏已收起，鼠标移到顶部可弹出');
   });
 
   document.getElementById('foldBtn').addEventListener('click', function () {
