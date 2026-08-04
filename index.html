@@ -1086,12 +1086,13 @@ function load() {
   render();
   loadDex();
 
+  var lastUpdatedTs = 0;
   function loadRemote() {
     return fetch('/api/data?t=' + Date.now())
       .then(function (r) {
         if (!r.ok) throw new Error('bad status');
         var ts = r.headers.get('X-Data-Updated');
-        if (ts) setUpdateTime(+ts);
+        if (ts) { lastUpdatedTs = +ts; setUpdateTime(lastUpdatedTs); }
         return r.text();
       })
       .then(function (text) {
@@ -1103,6 +1104,33 @@ function load() {
         }
       });
   }
+
+  function pollUpdate() {
+    fetch('/api/data?t=' + Date.now())
+      .then(function (r) {
+        if (!r.ok) throw new Error('bad status');
+        var ts = r.headers.get('X-Data-Updated');
+        return { ts: ts ? +ts : 0, text: r.text() };
+      })
+      .then(function (res) {
+        return Promise.resolve(res.text).then(function (text) {
+          if (!res.ts || res.ts === lastUpdatedTs) return;
+          lastUpdatedTs = res.ts;
+          var list = parseLines(text);
+          if (!list.length) return;
+          var same = JSON.stringify(state.groups.map(function (g) { return { g: g.group, n: g.names.slice().sort() }; })) ===
+            JSON.stringify(list.map(function (g) { return { g: g.group, n: g.names.slice().sort() }; }));
+          if (same) { setUpdateTime(res.ts); return; }
+          state.groups = list;
+          save();
+          setUpdateTime(res.ts);
+          render();
+          toast('菜单已更新，快看看新蛋！');
+        });
+      })
+      .catch(function () {});
+  }
+  setInterval(pollUpdate, 30000);
 
   loadRemote().catch(function () {
     fetch('data.txt?t=' + Date.now())
@@ -1145,6 +1173,35 @@ function load() {
   }
   window.addEventListener('scroll', updateNavActive, { passive: true });
   window.addEventListener('resize', updateNavActive);
+
+  var touchStartX = 0;
+  var touchStartY = 0;
+  document.getElementById('sections').addEventListener('touchstart', function (ev) {
+    touchStartX = ev.touches[0].clientX;
+    touchStartY = ev.touches[0].clientY;
+  }, { passive: true });
+  document.getElementById('sections').addEventListener('touchend', function (ev) {
+    var dx = ev.changedTouches[0].clientX - touchStartX;
+    var dy = ev.changedTouches[0].clientY - touchStartY;
+    if (Math.abs(dx) < 60 || Math.abs(dx) < Math.abs(dy)) return;
+    var nav = document.getElementById('groupNav');
+    var names = [];
+    nav.querySelectorAll('.gn-item').forEach(function (a) { names.push(a.getAttribute('data-gname')); });
+    if (!names.length) return;
+    var box = document.getElementById('sections');
+    var toolbarH = parseFloat(getComputedStyle(document.documentElement).getPropertyValue('--toolbar-h')) || 96;
+    var found = names[0];
+    box.querySelectorAll('.section').forEach(function (s) {
+      if (s.getBoundingClientRect().top <= toolbarH + 24) found = s.getAttribute('data-gname');
+    });
+    var i = names.indexOf(found);
+    i = dx < 0 ? Math.min(i + 1, names.length - 1) : Math.max(i - 1, 0);
+    var target = null;
+    box.querySelectorAll('.section').forEach(function (s) {
+      if (s.getAttribute('data-gname') === names[i]) target = s;
+    });
+    if (target) target.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }, { passive: true });
 })();
 </script>
 </body>
