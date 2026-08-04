@@ -1130,7 +1130,7 @@ function loadGroup(key, fallbackText) {
       b.classList.toggle('active', b.getAttribute('data-tab') === tab);
     });
     render();
-    loadRemote();
+    loadRemote().catch(function () {});
   }
 
   function splitNames(s) {
