@@ -43,6 +43,26 @@ export default {
       return new Response('ok', { status: 200, headers: CORS });
     }
 
+    if (request.method === 'GET' && url.pathname === '/api/want') {
+      const data = await env.EGG_KV.get('menu_want');
+      return new Response(data || '', {
+        headers: { ...CORS, 'Content-Type': 'text/plain; charset=utf-8' }
+      });
+    }
+
+    if (request.method === 'POST' && url.pathname === '/api/want') {
+      const auth = request.headers.get('Authorization') || '';
+      if (auth !== 'Bearer ' + (env.ADMIN_PASSWORD || '')) {
+        return new Response('unauthorized', { status: 401, headers: CORS });
+      }
+      const body = await request.text();
+      if (!body.trim()) {
+        return new Response('empty', { status: 400, headers: CORS });
+      }
+      await env.EGG_KV.put('menu_want', body);
+      return new Response('ok', { status: 200, headers: CORS });
+    }
+
     return new Response('not found', { status: 404, headers: CORS });
   }
 };

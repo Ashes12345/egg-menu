@@ -33,6 +33,17 @@
   }
   .stat b { color: #2d3350; }
 
+  .view-tabs {
+    display: flex; gap: 4px; justify-content: center; margin-top: 14px;
+    background: #eef0f8; border-radius: 999px; padding: 4px;
+    width: fit-content; margin-left: auto; margin-right: auto;
+  }
+  .view-tab {
+    border: none; background: transparent; color: #6b7280;
+    font-size: 14px; font-weight: 600; padding: 8px 24px; border-radius: 999px;
+    cursor: pointer; transition: background .15s, color .15s; white-space: nowrap;
+  }
+  .view-tab.active { background: #6b7bf7; color: #fff; }
   .toolbar {
     position: sticky; top: 0; z-index: 10;
     display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
@@ -356,6 +367,11 @@
     <div class="stat">共 <b id="statTotal">0</b> 种现蛋 · <b id="statGroups">0</b> 个分组</div>
   </div>
 
+  <div class="view-tabs">
+    <button class="view-tab active" data-tab="have">🥚 我有蛋</button>
+    <button class="view-tab" data-tab="want">🎯 我求蛋</button>
+  </div>
+
   <div class="toolbar">
     <div class="search">
       <span class="icon">🔍</span>
@@ -393,6 +409,7 @@
 <script>
 (function () {
   var STORAGE_KEY = 'roco_egg_menu_v3';
+  var STORAGE_KEY_WANT = 'roco_egg_menu_want_v3';
   var API_URL = '';
 
   function updateToolbarH() {
@@ -429,7 +446,22 @@
     '大粗：急躁亚龙×1，平和骨龙×1，固执海豹×1，固执冰乌达×1，开朗狮鹫×1，急躁海豹×1，急躁独角兽×1，胆小依兰龙×1'
   ].join('\n');
 
-  var state = { groups: load(), query: '', collapsed: loadCollapsed(), notes: {} };
+  var DEFAULT_WANT = '';
+  var state = {
+    tab: 'have',
+    groups: null,
+    have: null,
+    want: null,
+    collapsedHave: loadCollapsed('roco_menu_collapsed'),
+    collapsedWant: loadCollapsed('roco_menu_collapsed_want'),
+    collapsed: {},
+    query: '',
+    notes: {}
+  };
+  state.have = loadGroup(STORAGE_KEY, DEFAULT_TEXT);
+  state.want = loadGroup(STORAGE_KEY_WANT, DEFAULT_WANT);
+  state.groups = state.have;
+  state.collapsed = state.collapsedHave;
 
   var ALIASES = {
     '火冰乌达': '乌达（极昼的样子）',
@@ -1044,31 +1076,61 @@ var EGG_GROUPS = {
       .map(function (x) { return x.name; });
   }
 
-function load() {
+function loadGroup(key, fallbackText) {
     try {
-      var raw = localStorage.getItem(STORAGE_KEY);
+      var raw = localStorage.getItem(key);
       if (raw) {
         var arr = JSON.parse(raw);
         if (Array.isArray(arr) && arr.length) return arr;
       }
     } catch (e) {}
-    return parseLines(DEFAULT_TEXT);
+    return parseLines(fallbackText);
   }
 
   function save() {
-    try { localStorage.setItem(STORAGE_KEY, JSON.stringify(state.groups)); } catch (e) {}
+    try {
+      var key = state.tab === 'want' ? STORAGE_KEY_WANT : STORAGE_KEY;
+      localStorage.setItem(key, JSON.stringify(state.groups));
+    } catch (e) {}
   }
 
-  function loadCollapsed() {
+  function loadCollapsed(key) {
     try {
-      var raw = localStorage.getItem('roco_menu_collapsed');
+      var raw = localStorage.getItem(key);
       var obj = raw ? JSON.parse(raw) : {};
       return obj && typeof obj === 'object' ? obj : {};
     } catch (e) { return {}; }
   }
 
   function saveCollapsed() {
-    try { localStorage.setItem('roco_menu_collapsed', JSON.stringify(state.collapsed)); } catch (e) {}
+    try {
+      var key = state.tab === 'want' ? 'roco_menu_collapsed_want' : 'roco_menu_collapsed';
+      localStorage.setItem(key, JSON.stringify(state.collapsed));
+    } catch (e) {}
+  }
+
+  function apiDataUrl() {
+    var base = state.tab === 'want' ? '/api/want' : '/api/data';
+    return base + '?t=' + Date.now();
+  }
+
+  function switchTab(tab) {
+    if (state.tab === tab) return;
+    save();
+    saveCollapsed();
+    if (state.tab === 'have') { state.have = state.groups; state.collapsedHave = state.collapsed; }
+    else { state.want = state.groups; state.collapsedWant = state.collapsed; }
+    state.tab = tab;
+    state.groups = tab === 'want' ? state.want : state.have;
+    state.collapsed = tab === 'want' ? state.collapsedWant : state.collapsedHave;
+    state.query = '';
+    var si = document.getElementById('searchInput');
+    if (si) si.value = '';
+    document.querySelectorAll('.view-tab').forEach(function (b) {
+      b.classList.toggle('active', b.getAttribute('data-tab') === tab);
+    });
+    render();
+    loadRemote();
   }
 
   function splitNames(s) {
@@ -1170,6 +1232,9 @@ function load() {
     var box = document.getElementById('sections');
     var empty = document.getElementById('emptyBox');
     empty.style.display = list.length ? 'none' : 'block';
+    empty.innerHTML = state.tab === 'want' && !state.query.trim()
+      ? '<div class="big">🎯</div>暂无需求蛋'
+      : '<div class="big">🥚</div>没有找到匹配的蛋';
     box.innerHTML = '';
 
     var nav = document.getElementById('groupNav');
@@ -1527,11 +1592,14 @@ function load() {
   }
 
   function showAdminEditor() {
+    var isWant = state.tab === 'want';
     var listHtml = state.groups.map(function (g) {
       var eggs = g.names.map(function (n) {
+        var countInp = isWant ? '' :
+          '<input class="ag-count" type="number" min="0" max="999" value="' + eggCount(n) + '" title="数量">';
         return '<span class="ag-egg">' +
           '<input class="ag-name" value="' + esc(eggBase(n)) + '" placeholder="蛋名">' +
-          '<input class="ag-count" type="number" min="0" max="999" value="' + eggCount(n) + '" title="数量">' +
+          countInp +
           '<button class="ag-del" onclick="app_delEgg(this)">✕</button>' +
           '</span>';
       }).join('');
@@ -1545,11 +1613,12 @@ function load() {
         '</div>';
     }).join('');
     openDialog(
-      '<h3>⚙ 管理数据</h3>' +
-      '<div class="desc">编辑蛋名与数量，保存后发布到线上，所有人刷新即可看到。数量会显示在蛋卡图片右下角。</div>' +
+      '<h3>⚙ 管理数据 · ' + (isWant ? '我求蛋' : '我有蛋') + '</h3>' +
+      '<div class="desc">' + (isWant ? '填写你需要的蛋（无需数量），保存后访问者即可看到你的需求。' : '编辑蛋名与数量，保存后发布到线上，所有人刷新即可看到。数量会显示在蛋卡图片右下角。') + '</div>' +
       '<div class="btns" style="margin-top:0;margin-bottom:10px"><span class="left">' +
-      '<button class="btn" onclick="app_setAllCount(1)">全部数量设为 1</button>' +
-      '<button class="btn" onclick="app_setAllCount(0)">全部数量设为 0</button>' +
+      '<button class="btn" onclick="app_switchEdit()">切换到' + (isWant ? '我有蛋' : '我求蛋') + '</button>' +
+      (isWant ? '' : '<button class="btn" onclick="app_setAllCount(1)">全部数量设为 1</button>' +
+        '<button class="btn" onclick="app_setAllCount(0)">全部数量设为 0</button>') +
       '</span></div>' +
       '<div class="admin-list">' + listHtml +
       '<button class="ag-new" onclick="app_newGroup()">＋ 添加分组</button>' +
@@ -1560,6 +1629,11 @@ function load() {
       '</span></div>'
     );
   }
+
+  window.app_switchEdit = function () {
+    switchTab(state.tab === 'want' ? 'have' : 'want');
+    showAdminEditor();
+  };
 
   window.app_login = function () {
     var pw = (document.getElementById('pwInput').value || '').trim();
@@ -1628,7 +1702,7 @@ function load() {
       return;
     }
     var text = serialize();
-    fetch(API_URL + '/api/data', {
+    fetch(API_URL + (state.tab === 'want' ? '/api/want' : '/api/data'), {
       method: 'POST',
       headers: { 'Content-Type': 'text/plain;charset=utf-8', 'Authorization': 'Bearer ' + pw },
       body: text
@@ -1681,8 +1755,10 @@ function load() {
     var eggs = btn.parentNode.querySelector('.ag-eggs');
     var div = document.createElement('span');
     div.className = 'ag-egg';
+    var countInp = state.tab === 'want' ? '' :
+      '<input class="ag-count" type="number" min="0" max="999" value="0" title="数量">';
     div.innerHTML = '<input class="ag-name" placeholder="蛋名">' +
-      '<input class="ag-count" type="number" min="0" max="999" value="0" title="数量">' +
+      countInp +
       '<button class="ag-del" onclick="app_delEgg(this)">✕</button>';
     eggs.appendChild(div);
     div.querySelector('.ag-name').focus();
@@ -1711,7 +1787,8 @@ function load() {
       row.querySelectorAll('.ag-egg').forEach(function (egg) {
         var n = egg.querySelector('.ag-name').value.trim();
         if (!n) return;
-        var c = parseInt(egg.querySelector('.ag-count').value, 10);
+        var cInp = egg.querySelector('.ag-count');
+        var c = cInp ? parseInt(cInp.value, 10) : 0;
         if (isNaN(c) || c < 0) c = 0;
         names.push(c > 0 ? n + '×' + c : n);
       });
@@ -1721,6 +1798,8 @@ function load() {
     var list = parseLines(lines.join('\n'));
     if (!list.length) { toast('数据格式不对，请检查'); return; }
     state.groups = list;
+    if (state.tab === 'want') state.want = list;
+    else state.have = list;
     state.collapsed = {};
     closeDialog();
     toast('正在发布…');
@@ -1730,6 +1809,10 @@ function load() {
   document.getElementById('adminBtn').addEventListener('click', function () {
     if (getPw()) showAdminEditor();
     else showAdminLogin();
+  });
+
+  document.querySelectorAll('.view-tab').forEach(function (b) {
+    b.addEventListener('click', function () { switchTab(b.getAttribute('data-tab')); });
   });
 
   document.getElementById('qqBtn').addEventListener('click', function () {
@@ -1746,7 +1829,7 @@ function load() {
 
   var lastUpdatedTs = 0;
   function loadRemote() {
-    return fetch('/api/data?t=' + Date.now())
+    return fetch(apiDataUrl())
       .then(function (r) {
         if (!r.ok) throw new Error('bad status');
         var ts = r.headers.get('X-Data-Updated');
@@ -1757,6 +1840,8 @@ function load() {
         var list = parseLines(text);
         if (list.length) {
           state.groups = list;
+          if (state.tab === 'want') state.want = list;
+          else state.have = list;
           save();
           render();
         }
@@ -1764,7 +1849,7 @@ function load() {
   }
 
   function pollUpdate() {
-    fetch('/api/data?t=' + Date.now())
+    fetch(apiDataUrl())
       .then(function (r) {
         if (!r.ok) throw new Error('bad status');
         var ts = r.headers.get('X-Data-Updated');
@@ -1780,6 +1865,8 @@ function load() {
             JSON.stringify(list.map(function (g) { return { g: g.group, n: g.names.slice().sort() }; }));
           if (same) { setUpdateTime(res.ts); return; }
           state.groups = list;
+          if (state.tab === 'want') state.want = list;
+          else state.have = list;
           save();
           setUpdateTime(res.ts);
           render();
@@ -1791,12 +1878,15 @@ function load() {
   setInterval(pollUpdate, 30000);
 
   loadRemote().catch(function () {
-    fetch('data.txt?t=' + Date.now())
+    var f = state.tab === 'want' ? 'want.txt' : 'data.txt';
+    fetch(f + '?t=' + Date.now())
       .then(function (r) { return r.ok ? r.text() : Promise.reject(); })
       .then(function (text) {
         var list = parseLines(text);
         if (list.length) {
           state.groups = list;
+          if (state.tab === 'want') state.want = list;
+          else state.have = list;
           save();
           render();
         }
