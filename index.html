@@ -1193,6 +1193,17 @@ function load() {
     items.forEach(function (a) {
       a.classList.toggle('active', a.getAttribute('data-gname') === found);
     });
+    if (found) {
+      items.forEach(function (a) {
+        if (a.getAttribute('data-gname') === found) {
+          var nr = nav.getBoundingClientRect();
+          var ar = a.getBoundingClientRect();
+          if (ar.left < nr.left || ar.right > nr.right) {
+            a.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+          }
+        }
+      });
+    }
   }
   window.addEventListener('scroll', updateNavActive, { passive: true });
   window.addEventListener('resize', updateNavActive);
