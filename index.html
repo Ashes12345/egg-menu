@@ -217,6 +217,27 @@
     text-overflow: ellipsis; white-space: nowrap;
   }
   .gm-empty { font-size: 12.5px; color: #8a90a8; }
+  .gm-full-btn {
+    margin-left: auto; flex-shrink: 0; background: #6b7bf7; color: #fff;
+    border: none; border-radius: 8px; padding: 4px 12px; font-size: 12px; cursor: pointer;
+  }
+  .dialog h3.gm-head {
+    display: flex; align-items: center; justify-content: space-between;
+    gap: 8px; margin-bottom: 12px;
+  }
+  .dialog.full {
+    max-width: none; max-height: 100vh; height: 100vh; border-radius: 0;
+  }
+  .dialog.full .gm-list { max-height: calc(100vh - 110px); }
+  @media (max-width: 520px) {
+    .gm-list { gap: 8px; }
+    .gm-item {
+      flex: 0 0 calc((100% - 16px) / 3); width: auto;
+      padding: 6px 4px 5px; border-radius: 10px;
+    }
+    .gm-item img { width: 46px; height: 46px; margin-bottom: 4px; }
+    .gm-item .gm-name { font-size: 11px; }
+  }
   .egg-group-popup .eg-close {
     position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
     background: #4a5078; color: #fff; border: none; border-radius: 50%;
@@ -1309,7 +1330,8 @@ function load() {
   }
   function showGroupMembers(grp) {
     var list = EGG_GROUP_ALL[wikiGroupName(grp)] || [];
-    var html = '<h3>' + esc(grp) + '（' + list.length + '只）</h3>';
+    var html = '<h3 class="gm-head"><span>' + esc(grp) + '（' + list.length + '只）</span>' +
+      '<button class="gm-full-btn" id="gmFullBtn">⛶ 全屏</button></h3>';
     if (!list.length) html += '<div class="gm-empty">该组暂无宠物</div>';
     else html += '<div class="gm-list">' + list.map(function (p) {
       return '<button class="gm-item" data-name="' + esc(p[1]) + '" title="' + esc(p[0]) + '">' +
@@ -1317,6 +1339,12 @@ function load() {
         '<span class="gm-name">' + esc(p[1]) + '</span></button>';
     }).join('') + '</div>';
     openDialog(html);
+    var fbtn = document.getElementById('gmFullBtn');
+    if (fbtn) fbtn.addEventListener('click', function () {
+      var d = document.getElementById('dialog');
+      var full = d.classList.toggle('full');
+      fbtn.textContent = full ? '✕ 退出全屏' : '⛶ 全屏';
+    });
     document.querySelectorAll('.gm-item').forEach(function (b) {
       b.addEventListener('click', function () { copyText(b.getAttribute('data-name')); });
     });
@@ -1803,7 +1831,8 @@ function load() {
           var nr = nav.getBoundingClientRect();
           var ar = a.getBoundingClientRect();
           if (ar.left < nr.left || ar.right > nr.right) {
-            a.scrollIntoView({ behavior: 'smooth', inline: 'nearest', block: 'nearest' });
+            var targetLeft = ar.left - nr.left + nav.scrollLeft - 12;
+            nav.scrollTo({ left: targetLeft, behavior: 'smooth' });
           }
         }
       });
