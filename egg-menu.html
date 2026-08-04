@@ -211,7 +211,7 @@
     gap: 10px; padding: 4px;
   }
   .gm-item {
-    flex: 0 0 auto; width: 96px; background: #fff; border: 1px solid #e3e7f5;
+    flex: 0 0 auto; width: 96px; min-width: 0; background: #fff; border: 1px solid #e3e7f5;
     border-radius: 12px; cursor: pointer; padding: 8px 6px 6px; text-align: center;
   }
   .gm-item:hover { border-color: #b9c4f5; box-shadow: 0 4px 12px rgba(90,100,180,.15); }
@@ -238,11 +238,11 @@
   @media (max-width: 520px) {
     .gm-list { gap: 8px; }
     .gm-item {
-      flex: 0 0 calc((100% - 16px) / 3); width: auto;
+      flex: 0 0 calc((100% - 16px) / 3); width: auto; min-width: 0;
       padding: 6px 4px 5px; border-radius: 10px;
     }
     .gm-item img { width: 46px; height: 46px; margin-bottom: 4px; }
-    .gm-item .gm-name { font-size: 11px; }
+    .gm-item .gm-name { font-size: 11px; max-width: 100%; }
   }
   .egg-group-popup .eg-close {
     position: absolute; top: -8px; right: -8px; width: 22px; height: 22px;
