@@ -23,6 +23,10 @@
     display: inline-block; background: #fff4e5; border: 1px solid #ffd9a8; color: #b45309;
     font-size: 13px; font-weight: 600; border-radius: 8px; padding: 5px 12px; margin-top: 10px;
   }
+  .notice-wrap {
+    display: flex; align-items: center; gap: 10px; flex-wrap: wrap;
+  }
+  .notice-wrap #updTime { color: #8a90a8; font-size: 12px; }
   .stat {
     background: #fff; border: 1px solid #e6e9f2; border-radius: 999px;
     padding: 6px 14px; font-size: 13px; color: #5a6080; box-shadow: 0 1px 2px rgba(30,40,90,.04);
@@ -342,8 +346,11 @@
   <div class="header">
     <div>
       <div class="title">洛克王国 · 孵蛋交换菜单<img src="egg-title.png" style="width:28px;height:28px;vertical-align:middle;margin-left:6px"></div>
-      <div class="subtitle">点击卡片可直接复制宠物名 · 右键或长按卡片查看蛋组，点蛋组标签看该组一阶宠物<span id="updTime"></span></div>
-      <div class="notice">⚠️ 注意事项：均为 3v 只换 3v 抱歉抱歉</div>
+      <div class="subtitle">点击卡片可直接复制宠物名 · 右键或长按卡片查看蛋组，点蛋组标签看该组一阶宠物</div>
+      <div class="notice-wrap">
+        <div class="notice">⚠️ 注意事项：均为 3v 只换 3v 抱歉抱歉</div>
+        <span id="updTime"></span>
+      </div>
     </div>
     <div class="stat">共 <b id="statTotal">0</b> 种现蛋 · <b id="statGroups">0</b> 个分组</div>
   </div>
