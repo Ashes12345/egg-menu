@@ -1983,16 +1983,16 @@ var EGG_GROUPS = {
     });
   }
 
-  var firstPoll = true;
+  var pollsCount = 0;
   function pollUpdate() {
+    pollsCount++;
+    var silent = pollsCount === 1;
     ['have', 'want'].forEach(function (tab) {
       fetchTab(tab).then(function (list) {
         if (!list) return;
-        var active = applyList(tab, list, firstPoll);
-        if (active && !firstPoll) toast('菜单已更新，快看看新蛋！');
+        if (applyList(tab, list, silent) && !silent) toast('菜单已更新，快看看新蛋！');
       });
     });
-    firstPoll = false;
   }
   pollUpdate();
   setInterval(pollUpdate, 30000);
